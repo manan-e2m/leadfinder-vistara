@@ -11,9 +11,9 @@ export default {
     extend: {
       colors: {
         blue: {
-          DEFAULT: "var(--e2m-blue)",
-          deep: "var(--blue-deep)",
-          soft: "var(--blue-soft)",
+          DEFAULT: "var(--brand-primary, var(--e2m-blue))",
+          deep: "var(--brand-secondary, var(--blue-deep))",
+          soft: "var(--brand-soft, var(--blue-soft))",
         },
         ink: {
           DEFAULT: "var(--ink)",
