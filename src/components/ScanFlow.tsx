@@ -386,13 +386,14 @@ export default function ScanFlow() {
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {(() => {
-                    // Don't render an option chip for something already picked
-                    // (the selected capsules above already show it — showing
-                    // both is the "same chip twice" bug). Custom added terms
-                    // that aren't in options also hide their bare duplicate.
+                    /* Multi cards: picked options hide from the chip row (the
+                     * capsules above already show them — the "same chip twice"
+                     * bug). Single-value cards keep ALL chips visible with the
+                     * picked one highlighted, since hiding the only selection
+                     * would leave no way to see or switch it. */
                     const picked = isMultiField
                       ? new Set(f.value.split(",").map((s) => s.trim()).filter(Boolean))
-                      : new Set(f.value ? [f.value] : []);
+                      : new Set<string>();
                     const visible = f.options.filter((opt) => !picked.has(opt));
                     return visible.map((opt) => {
                       const isMulti = MULTI_FIELDS.has(key);
