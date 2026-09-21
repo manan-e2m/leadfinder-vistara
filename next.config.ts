@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   serverExternalPackages: ["@prisma/client"],
   logging: { fetches: { fullUrl: false } },
+  // Dev server and production builds each own their own output dir — running
+  // `next build` while `next dev` is up used to clobber dev's compiled pages
+  // and corrupt the webpack cache (the repeating "Cannot find module
+  // './vendor-chunks/…'" / missing-CSS failures).
+  distDir: process.env.BUILD_FOR_VERIFY ? ".next-build" : ".next",
   webpack: (config) => {
     // `isServer` is true for both nodejs and edge compilations in Next 15;
     // the edge compiler's name is "edge-server".
