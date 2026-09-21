@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * E2M brand system — pulled from e2msolutions.com.
+ *   Signature blue  #1638fb   ("Black Label Standard")
+ *   Accent orange   #f35700
+ *   Ink             #0a0a0a
+ * Everything derives from these tokens, so the platform re-skins by editing
+ * this block. The white-labeled audit page overrides --agency at runtime with
+ * the prospect agency's own brand colour.
+ */
+:root {
+  --e2m-blue: #1638fb;
+  --blue-deep: #0f28c4;
+  --blue-soft: #ecefff;
+
+  --e2m-orange: #f35700;
+  --orange-soft: #fff1e9;
+
+  --ink: #0a0a0a;
+  --ink-80: #2b2f36;
+  --ink-60: #5c636d;
+  --ink-40: #949aa4;
+
+  --line: #e9e9ec;
+  --line-strong: #d6d7dc;
+
+  --page: #fbfbfd;
+  --surface: #ffffff;
+  --surface-2: #f4f5f8;
+
+  --ok: #10794a;
+  --ok-soft: #e3f5ec;
+  --warn: #92600a;
+  --warn-soft: #fbf0d8;
+  --crit: #c62828;
+  --crit-soft: #fdeaea;
+
+  /* Default agency accent = E2M orange (the upsell). Overridden per-prospect
+     on the white-labeled audit page. */
+  --agency: #f35700;
+  --agency-soft: #fff1e9;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: "New Grotesk", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3 { letter-spacing: -0.025em; }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+::selection { background: var(--blue-soft); color: var(--blue-deep); }
+
+/* Premium focus ring for keyboard users */
+:where(a, button, input):focus-visible {
+  outline: 2px solid var(--e2m-blue);
+  outline-offset: 2px;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.animate-pulse-soft { animation: pulse-soft 1.4s ease-in-out infinite; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Staggered list entrances — set --i on the element for the delay. */
+.animate-stagger {
+  animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-pop { animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes bar-grow {
+  from { width: 0; }
+  to { width: var(--w, 0%); }
+}
+.animate-bar {
+  width: 0;
+  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(0.15s + var(--i, 0) * 90ms);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade { animation: fade-in 0.6s ease both; }
+
+/* Gentle infinite drift for ambient hero orbs */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(18px, -14px); }
+}
+
+/* Word-by-word headline reveal */
+@keyframes word-up {
+  from { opacity: 0; transform: translateY(18px) rotate(1.5deg); }
+  to { opacity: 1; transform: translateY(0) rotate(0); }
+}
+.animate-word {
+  display: inline-block;
+  animation: word-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* Signature electric-blue hero glow, subtly animated */
+.e2m-hero-glow {
+  position: relative;
+  background:
+    radial-gradient(55% 80% at 12% -5%, rgba(22, 56, 251, 0.10), transparent 60%),
+    radial-gradient(45% 70% at 95% 8%, rgba(243, 87, 0, 0.06), transparent 55%);
+}
+.e2m-hero-glow::before {
+  content: "";
+  position: absolute;
+  top: -120px; left: 8%;
+  width: 340px; height: 340px;
+  background: radial-gradient(circle, rgba(22, 56, 251, 0.14), transparent 68%);
+  filter: blur(18px);
+  animation: drift 11s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* E2M logo mark — ink→electric-blue gradient with a hover sheen */
+.e2m-mark {
+  background: linear-gradient(140deg, #0a0a0a 12%, #1a2fd0 78%, #1638fb 100%);
+}
+.e2m-mark-sheen {
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 48%, transparent 66%);
+  transform: translateX(-120%);
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .e2m-mark-sheen { transform: translateX(120%); }
+
+.shadow-board { box-shadow: 0 1px 2px rgba(10, 10, 10, 0.04), 0 8px 24px -12px rgba(10, 10, 10, 0.12); }
+.shadow-lift { box-shadow: 0 1px 2px rgba(10, 10, 10, 0.05), 0 18px 40px -20px rgba(22, 56, 251, 0.28); }
+
+/* Card hover lift used across boards */
+.lift { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, border-color 0.25s ease; }
+.lift:hover { transform: translateY(-3px); box-shadow: 0 1px 2px rgba(10,10,10,0.05), 0 22px 44px -22px rgba(22,56,251,0.22); }
+
+/* Buttons: subtle press */
+button, a { -webkit-tap-highlight-color: transparent; }
+.press { transition: transform 0.12s ease, background-color 0.18s ease, box-shadow 0.2s ease; }
+.press:active { transform: scale(0.97); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

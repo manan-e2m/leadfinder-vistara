@@ -1,0 +1,362 @@
+// LeadFinder — E2M Lead Finding & Prospecting (Vistara 2027)
+//
+// Deliberately provider-agnostic: no native enums, no Json columns, no
+// scalar arrays. Structured payloads live in TEXT columns and are read
+// back through the typed helpers in src/lib/json.ts, so the identical
+// schema runs on SQLite locally and Postgres in staging/production.
+// Switch with `npm run use:postgres`.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin-arm64", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// One agency. Keyed on registrable domain so that the owner, the COO and
+/// the ops lead who all scan within seconds of each other land here
+/// together instead of starting three separate runs. Plan §9.7
+model Workspace {
+  id         String   @id @default(cuid())
+  domain     String   @unique
+  agencyName String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  /// InferredIcp — per-field values with their own confidence scores
+  icpJson   String?
+  /// BrandAssets — logo, primary/secondary colour, tone. Drives the
+  /// white-labeled audit. Plan §5.2
+  brandJson String?
+  /// RouteDecision — which sourcing path the confirmed card selected.
+  /// Logged per run so we learn which routes convert. Workflow "fork".
+  routeJson String?
+
+  attendees     Attendee[]
+  runs          Run[]
+  crmPushes     CrmPush[]
+  scopeRequests ScopeRequest[]
+
+  @@index([createdAt])
+}
+
+/// Lightweight identity. Only ever requested at CRM push or E2M scoping —
+/// never to see results. Plan §5.1, §7.1
+model Attendee {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String?
+  agencyName  String?
+  /// qr | walkin | precompute | teammate
+  source      String   @default("qr")
+  joinedAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+/// One execution of the seven-stage pipeline.
+model Run {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  /// queued | running | complete | degraded | failed
+  status         String    @default("queued")
+  /// live | precomputed | offline
+  mode           String    @default("live")
+  startedAt      DateTime  @default(now())
+  finishedAt     DateTime?
+  totalMs        Int?
+  costCents      Float     @default(0)
+  /// Set when the cost cap forced a degraded path. Plan §9.3
+  cappedAt       DateTime?
+  /// string[] of stage names that fell back
+  fallbacksJson  String?
+  /// Counters shown on the honest progress screen
+  candidateCount Int       @default(0)
+  auditedCount   Int       @default(0)
+  heldBackCount  Int       @default(0)
+  leadCount      Int       @default(0)
+
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stageLogs  StageLog[]
+  candidates Candidate[]
+  leads      Lead[]
+  costs      CostLedger[]
+
+  @@index([workspaceId, startedAt])
+  @@index([status])
+}
+
+/// Per-stage timing, outcome and failure reason. Observability from day
+/// one: if something degrades at 10:40 on Feb 25 we know at 10:41. Plan §9.8
+model StageLog {
+  id        String   @id @default(cuid())
+  runId     String
+  stage     String
+  /// ok | fallback | skipped | failed
+  status    String
+  ms        Int
+  reason    String?
+  metaJson  String?
+  createdAt DateTime @default(now())
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([stage, status])
+}
+
+/// A sourced business, before verification and scoring.
+model Candidate {
+  id    String @id @default(cuid())
+  runId String
+
+  name           String
+  website        String?
+  phone          String?
+  email          String?
+  addressLine    String?
+  city           String?
+  region         String?
+  postalCode     String?
+  lat            Float?
+  lng            Float?
+  rating         Float?
+  reviewCount    Int?
+  reviewLatestAt DateTime?
+  /// permanently_closed | operational | unknown
+  businessStatus String    @default("unknown")
+  locationCount  Int       @default(1)
+  externalId     String?
+  /// places | apollo | adlibrary | storefront | jobboard
+  sourceName     String
+  rawJson        String?
+
+  /// Verification gates display. A candidate that fails is silently
+  /// backfilled by the next in queue — the shortlist never shrinks
+  /// on screen. Plan §9.4, Workflow change 01
+  verified         Boolean @default(false)
+  verifyFailReason String?
+  phoneLineType    String?
+  emailIsRole      Boolean @default(false)
+
+  run     Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+  signals Signal[]
+  lead    Lead?
+
+  @@index([runId, verified])
+  @@index([externalId])
+}
+
+/// One detected gap, with the measurement that proves it and the E2M
+/// service that fixes it. The unit of output is never a company record —
+/// it is a company plus a named gap plus proof. Plan §3.3, §5.4
+model Signal {
+  id          String @id @default(cuid())
+  candidateId String
+
+  /// stable key, e.g. "web.poor_cwv"
+  key         String
+  label       String
+  /// the checkable number: "Mobile CWV 24 / 100 · LCP 8.7 s"
+  measurement String
+  source      String
+  /// high | med | low
+  severity    String
+  /// 0..1 — a thin or timed-out audit scores low and is labelled on
+  /// screen rather than presented like a verified finding. Workflow change 06
+  confidence  Float   @default(1)
+  /// web | ecommerce | seo | ppc | content | ai
+  family      String
+  /// the E2M service that delivers the fix
+  service     String
+  /// what the agency pitches
+  pitch       String
+  /// optional benchmark sentence from the E2M corpus. Plan §8.1
+  benchmark   String?
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([family, severity])
+}
+
+/// A verified, scored, personalized prospect. Only these reach a screen.
+model Lead {
+  id          String @id @default(cuid())
+  runId       String
+  candidateId String @unique
+
+  rank  Int
+  score Int
+  /// visible components — showing the arithmetic is what makes a
+  /// skeptical room trust the number. Plan §5.5, Workflow change 02
+  fit   Int
+  pain  Int
+  pay   Int
+  reach Int
+
+  headlineGap String
+  tagLabel    String
+  benchmark   String?
+  /// true when personalization ran on a template rather than the LLM
+  degraded    Boolean @default(false)
+
+  run       Run            @relation(fields: [runId], references: [id], onDelete: Cascade)
+  candidate Candidate      @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  openers   Opener[]
+  auditDoc  AuditDoc?
+  scopeReqs ScopeRequest[]
+
+  @@index([runId, rank])
+}
+
+/// Drafted, never sent. The tool recommends; the agency sends. This is
+/// what keeps the product clear of TCPA and CAN-SPAM. Plan §3.5, §10
+model Opener {
+  id      String  @id @default(cuid())
+  leadId  String
+  /// email | phone
+  channel String
+  subject String?
+  body    String
+  /// llm | template
+  origin  String  @default("llm")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+/// The one-page white-labeled audit. The agency's logo and colours, the
+/// prospect's name, the findings with evidence. E2M's business model in
+/// miniature. Plan §5.6
+model AuditDoc {
+  id           String   @id @default(cuid())
+  leadId       String   @unique
+  /// public, unguessable share token
+  token        String   @unique
+  brandJson    String
+  findingsJson String
+  planSummary  String
+  createdAt    DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+/// "Have E2M scope and deliver this" — one tap, pre-filled, routed to the
+/// partner team. The whole upsell. Plan §7.3
+model ScopeRequest {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  leadId       String
+  contactEmail String
+  agencyName   String?
+  note         String?
+  /// new | acknowledged | scoped
+  status       String   @default("new")
+  payloadJson  String
+  createdAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+}
+
+/// GoHighLevel first, HubSpot second, CSV always. Plan §11.1
+model CrmPush {
+  id          String   @id @default(cuid())
+  workspaceId String
+  /// ghl | hubspot
+  provider    String
+  /// ok | failed
+  status      String
+  count       Int      @default(0)
+  error       String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+/// Candidate pools and per-business audits cached by metro + vertical.
+/// Two agencies targeting dentists in the same metro share a pool — the
+/// single biggest cost and latency saver in the build. Plan §9.2
+model CachePool {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  kind      String
+  payload   String
+  hits      Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([kind, expiresAt])
+}
+
+/// Every external call, priced. Enforces the per-run ceiling and answers
+/// "what did this cost" at any moment. Plan §9.3
+model CostLedger {
+  id       String   @id @default(cuid())
+  runId    String
+  provider String
+  op       String
+  units    Int      @default(1)
+  cents    Float
+  at       DateTime @default(now())
+
+  run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+/// Honored across every workspace. Plan §10 (CCPA/CPRA)
+model DoNotContact {
+  id        String   @id @default(cuid())
+  domain    String?
+  phone     String?
+  email     String?
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([domain])
+  @@index([phone])
+  @@index([email])
+}
+
+/// Every failure, with URL, stage and reason. Valuable after the event:
+/// it is the spec for the production version. Plan §6.8
+model FailureLog {
+  id        String   @id @default(cuid())
+  url       String?
+  stage     String
+  reason    String
+  runId     String?
+  createdAt DateTime @default(now())
+
+  @@index([stage, createdAt])
+}
+
+/// Registration export from the events team. Every registered attendee is
+/// pre-run and hand-QA'd weeks out, so on the day they get an instant,
+/// correct result and never touch the fallback path. Plan §6.7, §12.1
+model RegisteredAttendee {
+  id            String    @id @default(cuid())
+  agencyName    String
+  website       String
+  email         String?
+  /// pending | precomputed | failed | qa_passed | qa_fixed
+  status        String    @default("pending")
+  precomputedAt DateTime?
+  qaNote        String?
+  workspaceId   String?
+  createdAt     DateTime  @default(now())
+
+  @@index([status])
+}
