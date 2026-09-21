@@ -3,12 +3,13 @@ import { packJson, readJson } from "@/lib/json";
 import { log, logFailure } from "@/lib/logger";
 import { RunBudget } from "@/lib/cost";
 import { resetLlmBudget } from "@/providers";
+import { markRunInactive, markRunActive } from "@/lib/runRecovery";
 import type { Icp, BrandAssets, RouteDecision } from "@/lib/types";
 import { decideRoute } from "./stages/route";
 import { sourceCandidates } from "./stages/source";
 import { runAudits } from "./stages/audit";
 import { verifyCandidates } from "./stages/verify";
-import { scoreAll, capShortlist } from "./stages/score";
+import { scoreAll, capShortlist, type ScoredLead } from "./stages/score";
 import { personalize } from "./stages/personalize";
 import { randomBytes } from "node:crypto";
 
@@ -42,6 +43,7 @@ export async function executeRun(args: {
   const fallbacks: string[] = [];
   const startedAt = Date.now();
   resetLlmBudget();
+  markRunActive(runId);
 
   const stage = async <T,>(
     name: string,
@@ -169,11 +171,91 @@ export async function executeRun(args: {
     liveProgress.set(runId, { label: "Drafting openers and building branded audits" });
 
     let rank = 0;
+    let failedLeads = 0;
+    const leadErrors: string[] = [];
     for (const s of scored) {
-      rank++;
-      const p = s.candidate.place;
+      try {
+        await persistLead({ runId, s, rank: rank + 1, icp, brand, budget });
+        rank++;
+      } catch (leadErr) {
+        // One bad lead (bad data, LLM hiccup, constraint collision) must
+        // never destroy the run. Skip it, log it, keep going.
+        failedLeads++;
+        const reason = (leadErr as Error)?.message ?? String(leadErr);
+        leadErrors.push(`#${rank + 1} ${s.candidate.place.name}: ${reason}`);
+        await logFailure({
+          stage: "personalize",
+          reason: `lead skipped: ${reason}`,
+          url: s.candidate.place.website,
+          runId,
+        });
+        await db.stageLog.create({
+          data: {
+            runId, stage: "personalize", status: "failed", ms: 0,
+            reason: `lead skipped: ${reason}`.slice(0, 500),
+          },
+        }).catch(() => {});
+        liveProgress.set(runId, {
+          label: "Drafting openers and building branded audits",
+          detail: failedLeads > 0 ? `${failedLeads} lead(s) skipped due to errors` : undefined,
+        });
+      }
+    }
 
-      const candidate = await db.candidate.create({
+    if (leadErrors.length) {
+      fallbacks.push(`personalize:skipped_${leadErrors.length}_leads`);
+    }
+
+    await db.run.update({
+      where: { id: runId },
+      data: { leadCount: rank },
+    }).catch(() => {});
+
+    // Partial success: we produced at least one lead despite failures —
+    // the attendee still gets a results screen. Full failure only when
+    // nothing at all was produced.
+    const hadStageFallbacks = fallbacks.some((f) => !f.startsWith("personalize:skipped"));
+    if (rank === 0 && failedLeads > 0) {
+      await logFailure({
+        stage: "run",
+        reason: `all ${failedLeads} leads failed during personalize: ${leadErrors.join("; ")}`.slice(0, 500),
+        url: domain,
+        runId,
+      });
+      await finish(runId, "failed", startedAt, fallbacks, budget);
+      return;
+    }
+
+    await finish(
+      runId,
+      failedLeads > 0 || hadStageFallbacks ? "degraded" : "complete",
+      startedAt,
+      fallbacks,
+      budget
+    );
+    log("info", "run", `${runId} finished — ${rank} leads, ${failedLeads} skipped, ${budget.spentCents.toFixed(1)}c, ${Date.now() - startedAt}ms`);
+  } catch (e) {
+    await logFailure({ stage: "run", reason: (e as Error).message, url: domain, runId });
+    await finish(runId, "failed", startedAt, fallbacks, budget);
+  } finally {
+    liveProgress.delete(runId);
+    markRunInactive(runId);
+  }
+}
+
+/** Persist one scored candidate as Candidate + Lead + Opener + AuditDoc. */
+async function persistLead(args: {
+  runId: string;
+  s: ScoredLead;
+  rank: number;
+  icp: Icp;
+  brand: BrandAssets;
+  budget: RunBudget;
+}) {
+  const { runId, s, rank, icp, brand, budget } = args;
+  const p = s.candidate.place;
+
+  const candidate = await db.candidate.create({
         data: {
           runId,
           name: p.name,
@@ -241,21 +323,6 @@ export async function executeRun(args: {
           planSummary: personal.auditPlan,
         },
       });
-    }
-
-    await db.run.update({
-      where: { id: runId },
-      data: { leadCount: rank },
-    });
-
-    await finish(runId, fallbacks.length ? "degraded" : "complete", startedAt, fallbacks, budget);
-    log("info", "run", `${runId} complete — ${rank} leads, ${budget.spentCents.toFixed(1)}c, ${Date.now() - startedAt}ms`);
-  } catch (e) {
-    await logFailure({ stage: "run", reason: (e as Error).message, url: domain, runId });
-    await finish(runId, "failed", startedAt, fallbacks, budget);
-  } finally {
-    liveProgress.delete(runId);
-  }
 }
 
 async function finish(

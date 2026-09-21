@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { readJson } from "@/lib/json";
+import { brandCssVars } from "@/lib/brandTheme";
+import { generatedAvatarColor } from "@/lib/brand";
 import type { BrandAssets } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +23,7 @@ export default async function AuditPage({ params }: { params: Promise<{ token: s
 
   const brand = readJson<BrandAssets>(doc.brandJson, {
     logoUrl: null, primary: "#0F6B6B", secondary: "#08090C",
-    tone: "", agencyName: "Your agency", neutral: true,
+    tone: "", agencyName: "Your agency", neutral: true, generated: false,
   });
   const findings = readJson<{ label: string; measurement: string }[]>(doc.findingsJson, []);
   const prospect = doc.lead.candidate;
@@ -29,18 +31,40 @@ export default async function AuditPage({ params }: { params: Promise<{ token: s
   return (
     <main
       className="min-h-screen bg-page"
-      style={{ ["--agency" as string]: brand.primary }}
+      style={brandCssVars(brand)}
     >
       <div className="mx-auto max-w-2xl px-6 py-12">
         <div className="overflow-hidden rounded-board border border-line bg-surface shadow-sm">
           {/* Agency-branded header bar */}
-          <div className="px-8 py-6 text-white" style={{ background: brand.primary }}>
+          <div className="px-8 py-6 text-white" style={{ background: "var(--brand-primary)" }}>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold tracking-tight">
-                {brand.agencyName || "Your agency"}
+              <span className="flex items-center gap-3">
+                {brand.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={brand.logoUrl}
+                    alt={`${brand.agencyName || "Agency"} logo`}
+                    className="h-8 w-8 rounded bg-white/90 object-contain p-0.5"
+                  />
+                ) : (
+                  <span
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-extrabold text-white ring-1 ring-white/40"
+                    style={{ background: brand.generated ? brand.primary : "rgba(255,255,255,0.18)" }}
+                  >
+                    {(brand.agencyName || "A").trim().charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="text-sm font-bold tracking-tight">
+                  {brand.agencyName || "Your agency"}
+                </span>
               </span>
               <span className="text-[11px] uppercase tracking-widest opacity-80">Website & marketing audit</span>
             </div>
+            {brand.generated && (
+              <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-white/70">
+                Using generated brand
+              </p>
+            )}
           </div>
 
           <div className="px-8 py-7">
