@@ -17,6 +17,7 @@
     "use:sqlite": "node scripts/use-db.mjs sqlite",
     "use:postgres": "node scripts/use-db.mjs postgresql",
     "precompute": "tsx scripts/precompute.ts",
+    "smoke": "PROVIDER_MODE=mock tsx scripts/smoke.ts",
     "setup": "npm install && npm run db:push && npm run db:seed"
   },
   "prisma": { "seed": "tsx prisma/seed.ts" },
