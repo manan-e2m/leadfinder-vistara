@@ -10,18 +10,22 @@ interface OpsData {
   queue: { waiting: number; active: number; capacity: number };
   providers: { slot: string; name: string; live: boolean }[];
   cache: Record<string, { entries: number; hits: number }>;
+  runsSnapshot?: { staleNonTerminal: number; staleAfterMs: number };
   recentFailures: { stage: string; reason: string; url: string | null; at: string }[];
   recentRuns: { id: string; agency: string; status: string; mode: string; leads: number; costCents: number; totalMs: number | null; startedAt: string }[];
 }
 
-export default function OpsBoard() {
+export default function OpsBoard({ token = "" }: { token?: string }) {
   const [data, setData] = useState<OpsData | null>(null);
 
   useEffect(() => {
     let alive = true;
     async function poll() {
       try {
-        const res = await fetch("/api/providers", { cache: "no-store" });
+        const res = await fetch("/api/providers", {
+          cache: "no-store",
+          headers: token ? { "x-ops-token": token } : undefined,
+        });
         if (alive && res.ok) setData(await res.json());
       } catch {
         /* keep last good */
@@ -32,7 +36,7 @@ export default function OpsBoard() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [token]);
 
   if (!data) return <p className="text-sm text-ink-40">Loading ops…</p>;
 
@@ -45,6 +49,14 @@ export default function OpsBoard() {
         <Stat label="Live providers" value={`${liveCount}/${data.providers.length}`} />
         <Stat label="Queue" value={`${data.queue.active} active · ${data.queue.waiting} waiting`} />
         <Stat label="Cost cap" value={`${data.costCapCents}¢ / run`} />
+        {data.runsSnapshot && (
+          <Stat
+            label="Stale runs"
+            value={data.runsSnapshot.staleNonTerminal > 0
+              ? `${data.runsSnapshot.staleNonTerminal} need recovery`
+              : "0"}
+          />
+        )}
       </div>
 
       <Panel title="Providers">

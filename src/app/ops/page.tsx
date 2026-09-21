@@ -1,5 +1,5 @@
 import Link from "next/link";
-import OpsBoard from "@/components/OpsBoard";
+import OpsGate from '@/components/OpsGate';
 import { Wordmark } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export default function OpsPage() {
         </div>
       </header>
       <div className="mx-auto max-w-board px-6 py-8">
-        <OpsBoard />
+        <OpsGate />
       </div>
     </main>
   );
