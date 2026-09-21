@@ -2,25 +2,21 @@
  * Next.js instrumentation hook — runs once per server process at startup
  * (before any request is handled).
  *
- * Startup recovery sweep: any run left "queued"/"running"/"loading" by a
- * previous process (deploy, crash, dev reload) is past staleness by the
- * time the new process boots, so it is marked failed with a clear reason
- * instead of spinning forever on the progress screen.
+ * Startup recovery: any run left "queued"/"running"/"loading" by a previous
+ * process is marked failed with a clear reason, and persisted queue rows get
+ * re-enqueued (see src/lib/runRecovery.ts).
  *
- * Queue persistence sweep (AFTER the reap): the reaper has already failed
- * every orphaned run, so RunQueue rows still pointing at non-terminal runs
- * here belong to work that never got to start before the restart, not to
- * runs the reaper just condemned. Those are re-enqueued (capped) into the
- * fresh process's queue. Rows whose run is terminal (or whose re-enqueue
- * claim fails the status check) are simply skipped.
+ * NOTE: this file is compiled for BOTH runtimes (nodejs + edge). The edge
+ * graph cannot contain node: builtins, so the sweep loader below keeps the
+ * import out of webpack's static analysis via eval. The sweep itself lives
+ * in src/lib/startupSweep.ts.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   try {
-    const { reapStaleRuns, reenqueuePersistedQueues } = await import("@/lib/runRecovery");
-    const { enqueue } = await import("@/pipeline/queue");
-    await reapStaleRuns();
-    await reenqueuePersistedQueues(enqueue);
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const mod = await eval("import('@/lib/startupSweep')");
+    await (mod as { runStartupSweep: () => Promise<void> }).runStartupSweep();
   } catch (e) {
     // Never block server startup on recovery — e.g. DB not migrated yet.
     console.warn("[recovery] startup sweep skipped:", (e as Error).message);
