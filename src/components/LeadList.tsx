@@ -3,7 +3,7 @@
 import { useState } from "react";
 import clsx from "clsx";
 import type { RunView, LeadView } from "@/lib/results";
-import { Chip, ScoreBreakdown, ScorePill, SEVERITY, FAMILY_LABEL } from "./ui";
+import { Chip, ScoreBreakdown, ScoreRing, SEVERITY, FAMILY_LABEL } from "./ui";
 
 /**
  * Per-lead action state. Every mutating button (CRM push, scope email) keeps
@@ -206,7 +206,7 @@ function LeadCard({
     const line = [
       lead.business.name,
       lead.business.phone ?? "",
-      open ? lead.business.website ?? "" : "",
+      lead.business.website ?? "",
       lead.headlineGap,
       lead.openers.phone?.body ?? "",
     ]
@@ -229,7 +229,7 @@ function LeadCard({
       <div className="flex items-stretch">
         <button onClick={doToggle} className="flex min-w-0 flex-1 items-center gap-4 px-4 py-3.5 text-left">
           <span className="w-6 shrink-0 text-center font-mono text-sm text-ink-40">{lead.rank}</span>
-          <ScorePill score={lead.score} />
+          <ScoreRing score={lead.score} index={Math.min(index, 12)} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate text-[15px] font-bold text-ink">{lead.business.name}</span>
@@ -243,14 +243,6 @@ function LeadCard({
             <p className="mt-1 truncate text-xs text-ink-80">{lead.headlineGap}</p>
           </div>
           <span className={clsx("shrink-0 text-ink-40 transition", open && "rotate-180")}>▾</span>
-        </button>
-        {/* Copy stays outside the toggle so one click never expands the card */}
-        <button
-          onClick={copyRow}
-          className="shrink-0 border-l border-line px-3 text-[11px] font-semibold text-ink-60 hover:bg-surface-2 hover:text-blue"
-          aria-label={`Copy ${lead.business.name}'s contact details`}
-        >
-          {copied ? "Copied" : "Copy"}
         </button>
       </div>
 
@@ -272,6 +264,16 @@ function LeadCard({
                 {lead.business.website} ↗
               </a>
             )}
+            {/* Quick-steal copy lives here, next to the opener copy blocks, so
+                the collapsible card face stays clean (score/name/tier only).
+                It bundles name+phone+site+gap+phone opener for booth demos. */}
+            <button
+              onClick={copyRow}
+              className="press rounded-board border border-line-strong bg-surface px-3 py-1.5 text-[11px] font-semibold text-ink-60 hover:border-blue hover:text-blue"
+              aria-label={`Copy ${lead.business.name}'s contact details`}
+            >
+              {copied ? "Copied ✓" : "Copy details"}
+            </button>
             <div className="flex items-center gap-2">
               <CrmOneButton provider="ghl" leadId={lead.id} state={ghl} onPush={onPush} />
               <CrmOneButton provider="hubspot" leadId={lead.id} state={hubspot} onPush={onPush} />
@@ -290,10 +292,14 @@ function LeadCard({
             Findings ({lead.signals.length})
           </h4>
           <ul className="mt-2 space-y-1.5">
-            {lead.signals.map((s) => {
+            {lead.signals.map((s, si) => {
               const sev = SEVERITY[s.severity] ?? SEVERITY.low;
               return (
-                <li key={s.key} className="flex items-start gap-2.5 rounded-board border border-line bg-surface px-3 py-2">
+                <li
+                  key={s.key}
+                  className="animate-slide-in flex items-start gap-2.5 rounded-board border border-line bg-surface px-3 py-2"
+                  style={{ ["--i" as string]: si }}
+                >
                   <span className={clsx("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", sev.dot)} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
