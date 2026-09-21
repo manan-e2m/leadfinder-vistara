@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRunResults } from "@/lib/results";
+import { rawRunForLinkGuard, isLinkExpired } from "@/lib/linkGuard";
 import LeadList from "@/components/LeadList";
 import { Wordmark, Chip } from "@/components/ui";
 
@@ -15,6 +16,13 @@ const FALLBACK_COPY: Record<string, string> = {
 
 export default async function ResultsPage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
+
+  /* Opt-in expiry guard: only active when RESULT_LINK_TTL_HOURS > 0. */
+  const raw = await rawRunForLinkGuard(runId);
+  if (raw && isLinkExpired(raw)) {
+    return <ExpiredNotice />;
+  }
+
   const view = await getRunResults(runId);
   if (!view) notFound();
 
@@ -70,6 +78,29 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
         ) : (
           <LeadList view={view} />
         )}
+      </div>
+    </main>
+  );
+}
+
+/** Shown only when RESULT_LINK_TTL_HOURS is set and the run is past it. */
+function ExpiredNotice() {
+  return (
+    <main className="min-h-screen">
+      <header className="border-b border-line bg-surface">
+        <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
+          <Link href="/"><Wordmark /></Link>
+        </div>
+      </header>
+      <div className="mx-auto flex max-w-md flex-col items-center px-6 py-24 text-center">
+        <h1 className="text-xl font-bold text-ink">This results link has expired</h1>
+        <p className="mt-2 text-sm text-ink-60">
+          Result links are kept for a limited time after a scan. Run a fresh scan to
+          see current, verified prospects.
+        </p>
+        <Link href="/" className="mt-6 inline-block rounded-board bg-blue px-4 py-2 text-sm font-semibold text-white hover:bg-blue-deep">
+          New scan
+        </Link>
       </div>
     </main>
   );
