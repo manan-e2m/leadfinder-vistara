@@ -15,6 +15,13 @@ export async function loadBrandTheme(opts?: {
   workspaceId?: string | null;
   runId?: string | null;
 }): Promise<BrandTheme> {
+  // Public chrome (home, settings, ops) is ALWAYS E2M — the extracted brand
+  // is the product wearing the client's clothes on results/audit surfaces,
+  // not a stranger's logo on the front door. Default: E2M brand unless a
+  // workspace context is passed explicitly.
+  if (!opts?.workspaceId && !opts?.runId) {
+    return { brand: DEFAULT_BRAND, initial: "E" };
+  }
   let brandJson: string | null = null;
   let domain = "";
 

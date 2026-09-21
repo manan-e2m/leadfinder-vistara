@@ -25,8 +25,11 @@ export default function Home() {
       <div className="e2m-hero-glow">
         <div className="mx-auto max-w-board px-6 pb-16 pt-14">
           <div className="mx-auto mb-9 max-w-2xl text-center">
-            <span className="animate-pop inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-[11px] font-semibold text-blue-deep shadow-sm">
-              <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-orange" />
+            <span className="animate-pop inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-semibold text-blue-deep shadow-sm">
+              <span className="relative inline-flex h-[7px] w-[7px]">
+                <span className="animate-breathe absolute inset-0 rounded-full bg-orange" />
+                <span className="relative h-[7px] w-[7px] rounded-full bg-orange" />
+              </span>
               A prospecting engine that starts with your domain
             </span>
             <h1 className="mt-5 text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl">

@@ -1,7 +1,26 @@
 import type { Metadata } from "next";
+import { Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { loadBrandTheme, WithBrand } from "@/lib/brandLoader";
 import { brandCssVars } from "@/lib/brandTheme";
+
+/**
+ * Type system — Instrument Sans for the interface, JetBrains Mono for every
+ * number, domain and measurement. Exposed as CSS variables so globals.css and
+ * the tailwind tokens read a single source (see --font-sans / --font-mono).
+ */
+const sans = Instrument_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "E2M LeadFinder",
@@ -23,13 +42,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const cssVars = brandCssVars(theme.brand);
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body
         className="min-h-screen antialiased"
         style={cssVars}
         data-brand-logo={theme.brand?.logoUrl ? "1" : "0"}
       >
-        <WithBrand theme={theme}>{children}</WithBrand>
+        {/* Ambient platform backdrop — drifting brand orbs over a masked grid.
+            Fixed and pointer-events-none so it sits behind every route. */}
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+          <div className="app-bg-orb app-bg-orb--blue" />
+          <div className="app-bg-orb app-bg-orb--orange" />
+          <div className="app-bg-grid" />
+        </div>
+        <div className="relative z-[1]">
+          <WithBrand theme={theme}>{children}</WithBrand>
+        </div>
       </body>
     </html>
   );

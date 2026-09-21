@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRunResults } from "@/lib/results";
 import { rawRunForLinkGuard, isLinkExpired } from "@/lib/linkGuard";
+import { brandCssVars, DEFAULT_BRAND } from "@/lib/brandTheme";
 import LeadList from "@/components/LeadList";
 import { Wordmark, Chip } from "@/components/ui";
 
@@ -46,8 +47,12 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
 
   const title = view.workspace.agencyName ?? view.workspace.domain;
 
+  // The run's agency brand takes over the chrome here — the "add your website
+  // and the platform becomes yours" behavior. Public pages stay E2M.
+  const brand = { ...DEFAULT_BRAND, ...(view.brand ?? {}) };
+
   return (
-    <main className="relative z-[1] min-h-screen">
+    <main className="relative z-[1] min-h-screen" style={brandCssVars(brand)}>
       <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
           <Link href="/"><Wordmark /></Link>

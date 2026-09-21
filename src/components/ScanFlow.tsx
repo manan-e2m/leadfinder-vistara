@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { normalizeDomain } from "@/lib/domain";
@@ -24,6 +24,9 @@ interface ScanResponse {
   needsConfirmation: string[];
 }
 
+/** Rotating footprint sources shown while a scan is in flight. */
+const READING_STEPS = ["sitemap", "Google Business Profile", "ad library", "tech stack"];
+
 const FIELD_ORDER = ["servicesOffered", "targetVerticals", "geography", "dealSizeTier"] as const;
 const FIELD_LABEL: Record<string, string> = {
   servicesOffered: "Services you offer",
@@ -43,6 +46,14 @@ export default function ScanFlow() {
   const [icp, setIcp] = useState<Icp | null>(null);
   /** the registrable domain actually being scanned, shown under the input */
   const [scanned, setScanned] = useState<string | null>(null);
+  /** cycles the "reading…" source label while a scan is in flight */
+  const [stepIdx, setStepIdx] = useState(0);
+
+  useEffect(() => {
+    if (!loading) return;
+    const t = setInterval(() => setStepIdx((i) => i + 1), 420);
+    return () => clearInterval(t);
+  }, [loading]);
 
   async function runScan(raw?: string) {
     const value = raw ?? input;
@@ -149,8 +160,14 @@ export default function ScanFlow() {
             e.preventDefault();
             void runScan();
           }}
-          className="animate-rise rounded-board border border-line bg-surface p-6 shadow-board"
+          className="animate-rise relative overflow-hidden rounded-board border border-line bg-surface p-6 shadow-board"
         >
+          {/* Electric hairline across the top edge of the scan card. */}
+          <span
+            aria-hidden
+            className="absolute inset-x-6 top-0 h-0.5 opacity-60"
+            style={{ background: "linear-gradient(90deg, transparent, var(--e2m-blue), transparent)" }}
+          />
           <h1 className="text-2xl font-bold tracking-tight text-ink">Find your next 20 clients</h1>
           <p className="mt-2 text-sm text-ink-60">
             Enter your agency&apos;s website. We read your footprint across six sources, then find verified,
@@ -167,11 +184,19 @@ export default function ScanFlow() {
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="press rounded-board bg-blue px-5 py-3 text-sm font-semibold text-white shadow-lift transition hover:bg-blue-deep disabled:opacity-50 disabled:shadow-none"
+              className="press relative overflow-hidden rounded-board bg-blue px-5 py-3 text-sm font-semibold text-white shadow-lift transition hover:bg-blue-deep disabled:opacity-50 disabled:shadow-none"
             >
               {loading ? "Reading…" : "Scan"}
+              {loading && <span aria-hidden className="sheen-overlay sheen-overlay--fast" />}
             </button>
           </div>
+
+          {loading && (
+            <div className="animate-fade mt-3 flex items-center gap-2 text-xs text-ink-60">
+              <span className="animate-spin-slow h-3 w-3 rounded-full border-2 border-blue-soft border-t-blue" />
+              Reading {scanned ?? "your site"} — {READING_STEPS[stepIdx % READING_STEPS.length]}
+            </div>
+          )}
           {cleaned && (
             <p className="mt-2 text-xs text-ink-60">
               We&apos;ll scan <span className="font-mono font-semibold text-ink">{cleaned}</span> — the rest of

@@ -65,26 +65,57 @@ export default function Progress({ runId }: { runId: string }) {
     };
   }, [runId, router]);
 
+  const stages = data?.stages ?? PLACEHOLDER;
+  const doneCount = stages.filter((s) => s.status === "ok" || s.status === "fallback" || s.status === "failed").length;
+  const runningCount = stages.filter((s) => s.status === "running").length;
+  const pct = data?.terminal
+    ? 100
+    : Math.round(((doneCount + runningCount * 0.5) / stages.length) * 100);
+  const live = data?.terminal ? "done" : "live";
+
   return (
     <div className="mx-auto w-full max-w-xl">
-      <div className="rounded-board border border-line bg-surface p-6 shadow-board">
-        <div className="flex items-center justify-between">
+      <div className="relative overflow-hidden rounded-board border border-line bg-surface p-6 shadow-board">
+        {/* Scanline sweeps the card top-to-bottom while the shortlist builds. */}
+        {data && !data.terminal && (
+          <div
+            aria-hidden
+            className="animate-scanline pointer-events-none absolute inset-x-0 top-0 h-14"
+            style={{ background: "linear-gradient(180deg, rgba(22,56,251,0.12), transparent)" }}
+          />
+        )}
+        <div className="relative flex items-center justify-between">
           <h1 className="text-lg font-bold text-ink">Building your shortlist</h1>
-          {data && !data.terminal && (
-            <span className="flex items-center gap-1.5 text-xs text-ink-40">
-              <span className="h-2 w-2 animate-pulse-soft rounded-full bg-blue" />
-              live
+          {data && (
+            <span
+              className={clsx(
+                "flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.1em]",
+                data.terminal ? "text-ok" : "text-blue"
+              )}
+            >
+              <span
+                className={clsx(
+                  "h-[7px] w-[7px] animate-pulse-soft rounded-full",
+                  data.terminal ? "bg-ok" : "bg-blue"
+                )}
+              />
+              {live}
             </span>
           )}
         </div>
 
         {data?.live?.label && !data.terminal && (
-          <p className="mt-1 text-sm text-blue-deep">{data.live.label}</p>
+          <p className="relative mt-1.5 text-sm font-medium text-blue-deep">{data.live.label}</p>
         )}
-        {data?.live?.detail && <p className="text-xs text-ink-40">{data.live.detail}</p>}
+        {data?.terminal && (
+          <p className="relative mt-1.5 text-sm font-medium text-ok">Shortlist ready. Opening your results…</p>
+        )}
+        {data?.live?.detail && !data.terminal && (
+          <p className="relative font-mono text-xs text-ink-40">{data.live.detail}</p>
+        )}
 
-        <ol className="mt-5 space-y-1">
-          {(data?.stages ?? PLACEHOLDER).map((s) => (
+        <ol className="relative mt-5 space-y-1">
+          {stages.map((s) => (
             <li
               key={s.key}
               className={clsx(
@@ -119,26 +150,44 @@ export default function Progress({ runId }: { runId: string }) {
         </ol>
 
         {data && (
-          <div className="mt-5 grid grid-cols-4 gap-2 border-t border-line pt-4">
+          <>
+            <div className="relative mt-5 h-1 overflow-hidden rounded-full bg-surface-2">
+              <div
+                className="h-full rounded-full transition-[width] duration-300 ease-linear"
+                style={{
+                  width: `${pct}%`,
+                  background: "linear-gradient(90deg, var(--e2m-blue), var(--e2m-orange))",
+                }}
+              />
+            </div>
+            <div className="relative mt-2 flex justify-between font-mono text-[11px] text-ink-40">
+              <span>{data.totalMs != null ? `${(data.totalMs / 1000).toFixed(1)}s elapsed` : `${pct}% complete`}</span>
+              <span>
+                {data.costCents.toFixed(1)}¢ spent
+                {data.cappedAt ? " · cost cap reached" : ""}
+              </span>
+            </div>
+          </>
+        )}
+
+        {data && (
+          <div className="relative mt-5 grid grid-cols-4 gap-2 border-t border-line pt-4">
             {[
-              { k: "found", v: data.counts.candidate },
-              { k: "audited", v: data.counts.audited },
-              { k: "held back", v: data.counts.heldBack },
-              { k: "leads", v: data.counts.lead },
+              { k: "found", v: data.counts.candidate, cls: "text-ink" },
+              { k: "audited", v: data.counts.audited, cls: "text-ink" },
+              { k: "held back", v: data.counts.heldBack, cls: data.counts.heldBack > 0 ? "text-warn" : "text-ink" },
+              { k: "leads", v: data.counts.lead, cls: data.terminal ? "text-ok" : "text-blue" },
             ].map((c) => (
               <div key={c.k} className="text-center">
-                <div className="font-mono text-lg font-bold text-ink">{c.v}</div>
-                <div className="text-[10px] uppercase tracking-wide text-ink-40">{c.k}</div>
+                <div className={clsx("font-mono text-2xl font-bold tabular-nums tracking-tight transition-colors", c.cls)}>{c.v}</div>
+                <div className="mt-0.5 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-ink-40">{c.k}</div>
               </div>
             ))}
           </div>
         )}
 
-        {data?.terminal && (
-          <p className="mt-4 text-center text-sm text-ok">Done. Opening your shortlist…</p>
-        )}
         {error && (
-          <p className="mt-4 text-center text-sm text-ink-40">Reconnecting…</p>
+          <p className="relative mt-4 text-center text-sm text-ink-40">Reconnecting…</p>
         )}
       </div>
     </div>

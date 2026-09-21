@@ -122,3 +122,39 @@ export function ScorePill({ score }: { score: number }) {
     </div>
   );
 }
+
+/**
+ * Circular score ring. The arc animates from empty to score on mount, colored
+ * by band — the number lives in the middle. The full circle is 113 (2πr,
+ * r=18); the exposed arc is score% of it. `index` staggers the sweep down a
+ * ranked list.
+ */
+export function ScoreRing({ score, index = 0 }: { score: number; index?: number }) {
+  const color = score >= 80 ? "var(--ok)" : score >= 70 ? "var(--blue-deep)" : "var(--ink-80)";
+  const dash = (113 - (score / 100) * 113).toFixed(1);
+  return (
+    <span className="relative block h-[46px] w-[46px] shrink-0">
+      <svg viewBox="0 0 44 44" className="h-[46px] w-[46px] -rotate-90">
+        <circle cx="22" cy="22" r="18" fill="none" stroke="var(--line)" strokeWidth="4" />
+        <circle
+          cx="22"
+          cy="22"
+          r="18"
+          fill="none"
+          stroke={color}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray="113"
+          className="animate-ring"
+          style={{ ["--dash" as string]: dash, ["--i" as string]: index }}
+        />
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center font-mono text-sm font-bold tabular-nums"
+        style={{ color }}
+      >
+        {score}
+      </span>
+    </span>
+  );
+}

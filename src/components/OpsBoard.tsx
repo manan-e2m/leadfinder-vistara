@@ -44,17 +44,27 @@ export default function OpsBoard({ token = "" }: { token?: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-3">
-        <Stat label="Mode" value={data.mode} />
-        <Stat label="Live providers" value={`${liveCount}/${data.providers.length}`} />
-        <Stat label="Queue" value={`${data.queue.active} active · ${data.queue.waiting} waiting`} />
-        <Stat label="Cost cap" value={`${data.costCapCents}¢ / run`} />
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-2xl font-bold tracking-tight text-ink">Ops</h2>
+        <span className="flex items-center gap-2 font-mono text-[11px] text-ink-40">
+          <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-ok" />
+          polling every 3s
+        </span>
+      </div>
+
+      <div className="grid gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        <Stat label="Mode" value={data.mode} i={0} />
+        <Stat label="Live providers" value={`${liveCount}/${data.providers.length}`} i={1} />
+        <Stat label="Queue" value={`${data.queue.active} active · ${data.queue.waiting} waiting`} tone="blue" i={2} />
+        <Stat label="Cost cap" value={`${data.costCapCents}¢ / run`} i={3} />
         {data.runsSnapshot && (
           <Stat
             label="Stale runs"
             value={data.runsSnapshot.staleNonTerminal > 0
               ? `${data.runsSnapshot.staleNonTerminal} need recovery`
               : "0"}
+            tone={data.runsSnapshot.staleNonTerminal > 0 ? "warn" : "ok"}
+            i={4}
           />
         )}
       </div>
@@ -134,12 +144,17 @@ export default function OpsBoard({ token = "" }: { token?: string }) {
           {data.recentFailures.length === 0 ? (
             <p className="text-sm text-ink-40">Clean. Nothing logged.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {data.recentFailures.map((f, i) => (
-                <li key={i} className="text-xs">
-                  <span className="font-mono font-semibold text-crit">{f.stage}</span>
-                  <span className="text-ink-60">: {f.reason}</span>
-                  {f.url && <span className="text-ink-40"> ({f.url})</span>}
+                <li
+                  key={i}
+                  className="flex items-center gap-2.5 rounded-board border border-crit-soft bg-crit-soft px-3 py-2"
+                >
+                  <span className="shrink-0 rounded-chip bg-crit-soft px-2 py-0.5 text-[10px] font-bold text-crit">
+                    {f.stage}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-ink-80">{f.reason}</span>
+                  {f.url && <span className="shrink-0 font-mono text-[10.5px] text-ink-40">{f.url}</span>}
                 </li>
               ))}
             </ul>
@@ -150,11 +165,22 @@ export default function OpsBoard({ token = "" }: { token?: string }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  tone = "ink",
+  i = 0,
+}: {
+  label: string;
+  value: string;
+  tone?: "ink" | "blue" | "ok" | "warn";
+  i?: number;
+}) {
+  const toneCls = { ink: "text-ink", blue: "text-blue", ok: "text-ok", warn: "text-warn" }[tone];
   return (
-    <div className="rounded-board border border-line bg-surface px-4 py-2.5">
-      <p className="text-[10px] uppercase tracking-wide text-ink-40">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-ink">{value}</p>
+    <div className="animate-stagger rounded-board border border-line bg-surface px-4 py-3" style={{ ["--i" as string]: i }}>
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-40">{label}</p>
+      <p className={clsx("mt-1.5 font-mono text-lg font-bold tracking-tight", toneCls)}>{value}</p>
     </div>
   );
 }

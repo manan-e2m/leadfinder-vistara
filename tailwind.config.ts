@@ -31,8 +31,8 @@ export default {
         agency: { DEFAULT: "var(--agency)", soft: "var(--agency-soft)" },
       },
       fontFamily: {
-        sans: ["Manrope", "Helvetica Neue", "Arial", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: ["var(--font-sans)", "Instrument Sans", "Helvetica Neue", "Arial", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       borderRadius: { board: "10px", chip: "4px" },
       maxWidth: { board: "1180px" },

@@ -36,10 +36,18 @@ export default async function AuditPage({ params }: { params: Promise<{ token: s
       style={brandCssVars(brand)}
     >
       <div className="mx-auto max-w-2xl px-6 py-12">
-        <div className="overflow-hidden rounded-board border border-line bg-surface shadow-sm">
-          {/* Agency-branded header bar */}
-          <div className="px-8 py-6 text-white" style={{ background: "var(--brand-primary)" }}>
-            <div className="flex items-center justify-between">
+        <div className="animate-rise-in overflow-hidden rounded-board border border-line bg-surface shadow-board">
+          {/* Agency-branded header bar — the gradient deepens the agency's own
+              colour toward the corner; a slow sheen sweeps across it. */}
+          <div
+            className="relative overflow-hidden px-8 py-6 text-white"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--brand-primary), color-mix(in srgb, var(--brand-primary) 68%, #000))",
+            }}
+          >
+            <span aria-hidden className="sheen-overlay sheen-overlay--loop" />
+            <div className="relative flex items-center justify-between">
               <span className="flex items-center gap-3">
                 {brand.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -85,7 +93,7 @@ export default async function AuditPage({ params }: { params: Promise<{ token: s
                   </li>
                 ) : (
                   findings.map((f, i) => (
-                    <li key={i} className="rounded-board border border-line bg-page p-4">
+                    <li key={i} className="animate-stagger rounded-board border border-line bg-page p-4" style={{ ["--i" as string]: i }}>
                       <div className="flex items-start gap-3">
                         <span
                           className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
