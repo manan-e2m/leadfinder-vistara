@@ -12,6 +12,9 @@ export default function Home() {
             <span className="hidden text-xs font-medium text-ink-40 sm:inline">
               White label services. Black label standard.
             </span>
+            <Link href="/settings" className="text-xs font-semibold text-ink-60 hover:text-ink">
+              Settings
+            </Link>
             <Link href="/ops" className="text-xs font-semibold text-ink-60 hover:text-ink">
               Ops
             </Link>

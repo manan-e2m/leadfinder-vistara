@@ -54,6 +54,9 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
           <Link href="/" className="text-xs font-medium text-blue hover:text-blue-deep">
             New scan
           </Link>
+          <Link href="/settings" className="text-xs font-medium text-ink-60 hover:text-ink">
+            Settings
+          </Link>
         </div>
       </header>
 
