@@ -4,6 +4,10 @@ import "./globals.css";
 import { loadBrandTheme, WithBrand } from "@/lib/brandLoader";
 import { brandCssVars } from "@/lib/brandTheme";
 
+// Cookie-driven session whitelabeling: the brand depends on the lf_ws cookie,
+// so the root layout must render per-request, never as static shell.
+export const dynamic = "force-dynamic";
+
 /**
  * Type system — Instrument Sans for the interface, JetBrains Mono for every
  * number, domain and measurement. Exposed as CSS variables so globals.css and

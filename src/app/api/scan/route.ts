@@ -113,7 +113,11 @@ export async function POST(req: Request) {
     data: { icpJson: packJson(inferred.icp), brandJson: packJson(inferred.brand) },
   });
 
-  return NextResponse.json({
+  // Session-scoped white-labeling: once THIS scan's site has been read, the
+  // whole app (home, confirm card, run, results, audit) wears the extracted
+  // brand — the cookie flips loadBrandTheme from E2M chrome to the agency
+  // theme. Cleared by "New scan" reset / natural expiry.
+  const res = NextResponse.json({
     workspaceId: workspace.id,
     runId: run.id,
     domain,
@@ -125,4 +129,11 @@ export async function POST(req: Request) {
     siteFailure: inferred.siteFailure,
     needsConfirmation: needsConfirmation(inferred.icp),
   });
+  res.cookies.set("lf_ws", workspace.id, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return res;
 }

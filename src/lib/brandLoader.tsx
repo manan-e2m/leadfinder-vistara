@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { readJson } from "@/lib/json";
 import { DEFAULT_BRAND, type BrandTheme } from "@/lib/brandTheme";
@@ -15,13 +16,33 @@ export async function loadBrandTheme(opts?: {
   workspaceId?: string | null;
   runId?: string | null;
 }): Promise<BrandTheme> {
-  // Public chrome (home, settings, ops) is ALWAYS E2M — the extracted brand
-  // is the product wearing the client's clothes on results/audit surfaces,
-  // not a stranger's logo on the front door. Default: E2M brand unless a
-  // workspace context is passed explicitly.
+  // Session-scoped white-labeling (App. C, revised per product direction):
+  // when the visitor has scanned their site this session, the `lf_ws` cookie
+  // carries the workspace id and the ENTIRE app — home, confirm card, run,
+  // results, audit — adopts the extracted brand. With no cookie, public
+  // chrome stays E2M. Explicit runId (deep link to a shared result) always
+  // wears that run's brand regardless of cookie.
   if (!opts?.workspaceId && !opts?.runId) {
+    try {
+      const jar = await cookies();
+      const wsId = jar.get("lf_ws")?.value;
+      if (wsId) return loadForWorkspace(wsId);
+    } catch {
+      // cookies() unavailable (e.g. prerender) — fall through to E2M
+    }
     return { brand: DEFAULT_BRAND, initial: "E" };
   }
+  return loadScoped(opts);
+}
+
+async function loadForWorkspace(workspaceId: string): Promise<BrandTheme> {
+  return loadScoped({ workspaceId });
+}
+
+async function loadScoped(opts: {
+  workspaceId?: string | null;
+  runId?: string | null;
+}): Promise<BrandTheme> {
   let brandJson: string | null = null;
   let domain = "";
 
