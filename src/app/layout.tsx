@@ -6,7 +6,7 @@ import { brandCssVars } from "@/lib/brandTheme";
 export const metadata: Metadata = {
   title: "E2M LeadFinder",
   description:
-    "Instant ICP-to-prospect engine for agency owners. Scan your agency, get a verified, scored, personalized shortlist in under a minute.",
+    "Scan your agency, get a verified, scored shortlist of prospects in under a minute. Built for agency owners who need leads, not dashboards.",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
