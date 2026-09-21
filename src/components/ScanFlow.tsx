@@ -103,12 +103,15 @@ export default function ScanFlow() {
     });
   }
 
-  /** "Who you target" takes multiple verticals — comma-joined into .value,
-   * which the route matcher and sourcing-widening both already expect
-   * (route regexes test substrings; Place search splits on [,&]). */
-  function toggleVertical(opt: string) {
+  /** "Services you offer" and "Who you target" take multiple picks —
+   * comma-joined into .value, which the route matcher and sourcing-widening
+   * both already expect (route regexes test substrings; Place search splits
+   * on [,&]). */
+  const MULTI_FIELDS = new Set(["targetVerticals", "servicesOffered"]);
+
+  function toggleMulti(key: "targetVerticals" | "servicesOffered", opt: string) {
     if (!icp) return;
-    const f = icp.targetVerticals;
+    const f = icp[key];
     const current = f.value.split(",").map((s) => s.trim()).filter(Boolean);
     const next = current.includes(opt)
       ? current.filter((v) => v !== opt)
@@ -116,7 +119,7 @@ export default function ScanFlow() {
     const value = next.join(", ");
     setIcp({
       ...icp,
-      targetVerticals: {
+      [key]: {
         ...f,
         value,
         confirmed: next.length > 0,
@@ -306,14 +309,14 @@ export default function ScanFlow() {
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {f.options.map((opt) => {
-                    const isMulti = key === "targetVerticals";
+                    const isMulti = MULTI_FIELDS.has(key);
                     const selected = isMulti
                       ? f.value.split(",").map((s) => s.trim()).includes(opt) && f.value !== ""
                       : f.value === opt;
                     return (
                       <button
                         key={opt}
-                        onClick={() => (isMulti ? toggleVertical(opt) : setField(key, opt))}
+                        onClick={() => (isMulti ? toggleMulti(key as "targetVerticals" | "servicesOffered", opt) : setField(key, opt))}
                         className={clsx(
                           "rounded-chip border px-2.5 py-1 text-xs font-medium transition",
                           selected
