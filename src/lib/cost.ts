@@ -41,8 +41,16 @@ export class RunBudget {
   get isCapped() { return this.capped; }
   get remaining() { return Math.max(0, this.capCents - this.spent); }
 
+  /**
+   * Per-run guard: keeps an enthusiastic loop from distorting the BILL, but
+   * per user request (2026-09-21) it never degrades a run anymore — the cap
+   * is tracked and recorded for the bill, and the user-facing "cost cap"
+   * messaging is gone. `costCapCents = 0` disables the cap entirely.
+   */
+
   /** True when there is room for this op. Callers degrade rather than throw. */
   canAfford(op: string, units = 1): boolean {
+    if (this.capCents <= 0) return true; // cap disabled
     const cost = (UNIT_COST_CENTS[op] ?? 0) * units;
     return this.spent + cost <= this.capCents;
   }
@@ -53,6 +61,12 @@ export class RunBudget {
     // cap made demos degrade into template openers mid-audit (340 pool
     // audits burn the 45c cap fast) for money that was never spent.
     if (env.providerMode === "mock") return true;
+    if (this.capCents <= 0) {
+      // Cap disabled: record spend for the bill, never restrict.
+      const cents = (UNIT_COST_CENTS[op] ?? 0) * units;
+      this.spent += cents;
+      return true;
+    }
     const cents = (UNIT_COST_CENTS[op] ?? 0) * units;
     if (this.spent + cents > this.capCents) {
       if (!this.capped) {

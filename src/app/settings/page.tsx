@@ -96,8 +96,12 @@ export default function SettingsPage() {
         <section className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="rounded-board border border-line bg-surface p-5">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-40">Cost cap</h2>
-            <p className="mt-2 font-mono text-[15px] font-bold text-ink">{env.costCapCents}¢</p>
-            <p className="mt-1 text-xs text-ink-60">per run, hard ceiling. Audits skip when it hits.</p>
+            <p className="mt-2 font-mono text-[15px] font-bold text-ink">
+              {env.costCapCents > 0 ? `${env.costCapCents}¢` : "off"}
+            </p>
+            <p className="mt-1 text-xs text-ink-60">
+              {env.costCapCents > 0 ? "per run, hard ceiling. Audits skip when it hits." : "unlimited — spend is only tracked."}
+            </p>
           </div>
           <div className="rounded-board border border-line bg-surface p-5">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-40">Rate limit</h2>

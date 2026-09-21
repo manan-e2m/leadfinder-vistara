@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const FALLBACK_COPY: Record<string, string> = {
   route: "Route was defaulted while a better vertical match retried in the background.",
   source: "Sourcing degraded. We showed cached results.",
-  "audit:cost_cap": "Cost cap reached, so some audits were skipped.",
+  "audit:cost_cap": "Some audits were skipped partway — the pipeline kept going without them.",
   "score:fit_only": "Audits didn't complete. Ranked on fit alone.",
 };
 
@@ -25,7 +25,7 @@ function fewerLeadsExplainer(view: NonNullable<Awaited<ReturnType<typeof getRunR
   const reasons: string[] = [];
   if (c.heldBack > 0)
     reasons.push(`${c.heldBack} prospects were held back on verification (bad phone, closed, or missing site) — we never pad the list with them.`);
-  if (view.fallbacks.includes("audit:cost_cap")) reasons.push("the cost cap stopped some audits partway.");
+  if (view.fallbacks.includes("audit:cost_cap")) reasons.push("some audits were skipped partway (a provider timed out).");
   if (view.fallbacks.includes("score:fit_only")) reasons.push("audits didn't complete, so ranking ran on fit alone.");
   if (view.fallbacks.includes("source") || view.fallbacks.includes("route")) reasons.push("sourcing was degraded and used cached listings only.");
   if (c.candidate > 0 && c.candidate < 5) reasons.push(`only ${c.candidate} candidates matched this vertical/geo in our source coverage.`);
@@ -79,7 +79,6 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
               {view.counts.candidate} sourced · {view.counts.audited} audited · {view.counts.heldBack} held back on
               verification · <span className="font-neutral font-mono font-semibold text-ink">{view.counts.lead} passed</span>
               {view.totalMs != null && ` · ${(view.totalMs / 1000).toFixed(1)}s`}
-              {` · ${view.costCents.toFixed(1)}¢`}
             </p>
 
             {view.fallbacks.length > 0 && (

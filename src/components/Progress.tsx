@@ -162,10 +162,6 @@ export default function Progress({ runId }: { runId: string }) {
             </div>
             <div className="relative mt-2 flex justify-between font-mono text-[11px] text-ink-40">
               <span>{data.totalMs != null ? `${(data.totalMs / 1000).toFixed(1)}s elapsed` : `${pct}% complete`}</span>
-              <span>
-                {data.costCents.toFixed(1)}¢ spent
-                {data.cappedAt ? " · cost cap reached" : ""}
-              </span>
             </div>
           </>
         )}

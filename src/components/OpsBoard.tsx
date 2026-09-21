@@ -56,7 +56,7 @@ export default function OpsBoard({ token = "" }: { token?: string }) {
         <Stat label="Mode" value={data.mode} i={0} />
         <Stat label="Live providers" value={`${liveCount}/${data.providers.length}`} i={1} />
         <Stat label="Queue" value={`${data.queue.active} active · ${data.queue.waiting} waiting`} tone="blue" i={2} />
-        <Stat label="Cost cap" value={`${data.costCapCents}¢ / run`} i={3} />
+        <Stat label="Cost cap" value={data.costCapCents > 0 ? `${data.costCapCents}¢ / run` : "off"} i={3} />
         {data.runsSnapshot && (
           <Stat
             label="Stale runs"
