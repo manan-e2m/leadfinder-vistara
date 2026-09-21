@@ -145,6 +145,16 @@ function isUsableLogo(url: string): boolean {
   if (GENERIC_HOSTS.some((p) => url.toLowerCase().includes(p))) return false;
   // Known builder placeholder file names regardless of host
   if (/\/(?:damask|logo-light|logo-dark)\.(?:svg|png)\b/i.test(url)) return false;
+
+  // PHOTO REJECTION: content photography passing itself off as a logo is the
+  // ugliest failure mode (a surgery photo in a 36px header mark, real case).
+  // JPEG is a content-photo format; logos ship as svg/png/ico/webp. Combined
+  // with camera/asset-path naming signals, confidence is high enough to reject
+  // and fall through to the favicon or the generated letter avatar instead.
+  const PHOTO_NAME = /(?:^|\/)(?:img_|dsc[_-]?|photo[_-]?|pexels|shutterstock|unsplash|_mobile\.|_desktop\.|-\d+x\d+\.)/i;
+  const PHOTO_PATH = /\/(?:uploads|wp-content\/uploads|media|photos?|gallery|blog|portfolio|cases?|team)\/(?:20\d\d\/)?/i;
+  if (/\.jpe?g(\?|$)/i.test(url) && (PHOTO_NAME.test(url) || PHOTO_PATH.test(url))) return false;
+  if (/\.(?:jpe?g|heic|avif)(\?|$)/i.test(url) && PHOTO_NAME.test(url)) return false;
   return true;
 }
 
