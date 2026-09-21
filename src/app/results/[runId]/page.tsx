@@ -47,44 +47,47 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
   const title = view.workspace.agencyName ?? view.workspace.domain;
 
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-line bg-surface">
+    <main className="relative z-[1] min-h-screen">
+      <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
           <Link href="/"><Wordmark /></Link>
-          <Link href="/" className="text-xs font-medium text-blue hover:text-blue-deep">
-            New scan
-          </Link>
-          <Link href="/settings" className="text-xs font-medium text-ink-60 hover:text-ink">
-            Settings
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-xs font-semibold text-blue hover:text-blue-deep">
+              New scan
+            </Link>
+            <Link href="/settings" className="text-xs font-semibold text-ink-60 hover:text-ink">
+              Settings
+            </Link>
+          </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-6 py-8">
-        <div className="mb-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-ink">Prospects for {title}</h1>
-            {view.status === "degraded" && <Chip tone="warn">degraded, still real</Chip>}
-            {view.mode === "precomputed" && <Chip tone="blue">precomputed</Chip>}
-          </div>
-          <p className="mt-1.5 text-sm text-ink-60">
-            {view.counts.candidate} sourced · {view.counts.audited} audited · {view.counts.heldBack} held back on
-            verification · <span className="font-medium text-ink-80">{view.counts.lead} passed</span>
-            {view.totalMs != null && ` · ${(view.totalMs / 1000).toFixed(1)}s`}
-            {` · ${view.costCents.toFixed(1)}¢`}
-          </p>
-
-          {view.fallbacks.length > 0 && (
-            <div className="mt-3 rounded-board border border-warn/30 bg-warn-soft px-3 py-2">
-              <p className="text-xs font-semibold text-warn">What degraded, honestly:</p>
-              <ul className="mt-1 space-y-0.5">
-                {view.fallbacks.map((f) => (
-                  <li key={f} className="text-[11px] text-warn">• {FALLBACK_COPY[f] ?? f}</li>
-                ))}
-              </ul>
+      <div className="e2m-hero-glow">
+        <div className="mx-auto max-w-3xl px-6 pb-16 pt-10">
+          <div className="mb-6 animate-rise">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-balance text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">Prospects for {title}</h1>
+              {view.status === "degraded" && <Chip tone="warn">degraded, still real</Chip>}
+              {view.mode === "precomputed" && <Chip tone="blue">precomputed</Chip>}
             </div>
-          )}
-        </div>
+            <p className="mt-1.5 text-sm text-ink-60">
+              {view.counts.candidate} sourced · {view.counts.audited} audited · {view.counts.heldBack} held back on
+              verification · <span className="font-neutral font-mono font-semibold text-ink">{view.counts.lead} passed</span>
+              {view.totalMs != null && ` · ${(view.totalMs / 1000).toFixed(1)}s`}
+              {` · ${view.costCents.toFixed(1)}¢`}
+            </p>
+
+            {view.fallbacks.length > 0 && (
+              <div className="mt-3 rounded-board border border-warn/30 bg-warn-soft px-3 py-2">
+                <p className="text-xs font-semibold text-warn">What degraded, honestly:</p>
+                <ul className="mt-1 space-y-0.5">
+                  {view.fallbacks.map((f) => (
+                    <li key={f} className="text-[11px] text-warn">• {FALLBACK_COPY[f] ?? f}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
 
         {view.leads.length === 0 ? (
           <div className="rounded-board border border-line bg-surface p-8 text-center">
@@ -108,6 +111,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
             <LeadList view={view} />
           </>
         )}
+        </div>
       </div>
     </main>
   );
@@ -116,8 +120,8 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
 /** Shown only when RESULT_LINK_TTL_HOURS is set and the run is past it. */
 function ExpiredNotice() {
   return (
-    <main className="min-h-screen">
-      <header className="border-b border-line bg-surface">
+    <main className="relative z-[1] min-h-screen">
+      <header className="border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
           <Link href="/"><Wordmark /></Link>
         </div>
