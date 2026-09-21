@@ -23,7 +23,15 @@ const VERTICAL_OPTIONS = [
 const SERVICE_OPTIONS = [
   "Web design & development", "SEO", "Paid media", "Content", "Branding", "Full service",
 ];
-const GEO_OPTIONS = ["My metro", "My state", "Regional", "National"];
+/**
+ * Geography options are REAL names, not abstract scopes — the confirm card
+ * should read like a human wrote it. The detected metro's proper name leads;
+ * the rest are scope multipliers phrased concretely. Selection stays a plain
+ * string in Icp.geography.value, and the sourcing path treats "state" and
+ * "regional" selections by widening the radius around the detected metro —
+ * the geography clause is display + intent, while the geo math stays here.
+ */
+const GEO_OPTIONS = ["My metro area", "Wider state", "Multi-state region", "U.S. national"];
 
 function field(
   value: string,
@@ -109,10 +117,13 @@ export async function inferIcp(args: {
   const verticalConfidence = args.overrides?.vertical ? 1 : verticals.length ? 0.8 : 0.2;
 
   /* ── geography ───────────────────────────────────────────── */
+  // Detection yields the REAL place name (city / service area from the
+  // site's own copy); the abstract "National" default only applies when the
+  // site is reachable but gives no geography at all.
   const geoValue =
     args.overrides?.city ??
     profile?.serviceArea ??
-    (tech?.reachable ? "National" : "");
+    (tech?.reachable ? "U.S. national" : "");
   const geoConfidence = args.overrides?.city ? 1 : profile?.serviceArea ? 0.9 : 0.25;
 
   /* ── deal size ───────────────────────────────────────────────
