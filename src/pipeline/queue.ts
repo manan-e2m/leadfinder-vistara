@@ -1,7 +1,18 @@
 import { executeRun } from "./run";
+import { db } from "@/lib/db";
 import { log } from "@/lib/logger";
 import { markRunActive, markRunInactive } from "@/lib/runRecovery";
+import { packJson } from "@/lib/json";
 import type { Icp, BrandAssets } from "@/lib/types";
+/** Upsert may miss under a race; losing one persistence row is harmless. */
+const persistQueueRow = (runId: string, jobId: string, status: string, icp: Icp, brand: BrandAssets) =>
+  db.runQueue
+    .upsert({
+      where: { runId },
+      create: { runId, status, payloadJson: packJson({ icp, brand }) },
+      update: { status },
+    })
+    .catch((e) => log("warn", "queue", `persistence for ${jobId} skipped: ${e.message}`));
 
 /**
  * In-process job queue with bounded concurrency.
@@ -44,6 +55,7 @@ export function enqueue(job: Job) {
   }
   pending.push(job);
   markRunActive(job.runId);
+  void persistQueueRow(job.runId, job.runId, "queued", job.icp, job.brand);
   log("info", "queue", `enqueued ${job.runId} (${pending.length} waiting, ${active.size} active)`);
   drain();
 }
@@ -56,11 +68,16 @@ function drain() {
   while (active.size < MAX_CONCURRENT && pending.length > 0) {
     const job = pending.shift()!;
     active.add(job.runId);
+    void persistQueueRow(job.runId, job.runId, "running", job.icp, job.brand);
     void executeRun(job)
       .catch((e) => log("error", "queue", `${job.runId} threw: ${e.message}`))
       .finally(() => {
         active.delete(job.runId);
         markRunInactive(job.runId);
+        // The run has reached a terminal state here (executeRun's own
+        // finally handled failed/crashed paths too), so the persisted
+        // queue row is done — kept for audit, not re-enqueued at boot.
+        void persistQueueRow(job.runId, job.runId, "done", job.icp, job.brand);
         drain();
       });
   }

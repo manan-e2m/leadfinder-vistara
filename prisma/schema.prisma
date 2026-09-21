@@ -349,11 +349,11 @@ model FailureLog {
 /// completion. Queue depth in SQLite is tiny (walk-ins), so this is a
 /// bridge, not a replacement for a real broker. Plan §5.8
 model RunQueue {
-  id         String   @id @default(cuid())
-  runId      String   @unique
+  id          String   @id @default(cuid())
+  runId       String   @unique
   /// queued | running | done
-  status     String   @default("queued")
-  enqueuedAt DateTime @default(now())
+  status      String   @default("queued")
+  enqueuedAt  DateTime @default(now())
   payloadJson String?
 }
 
