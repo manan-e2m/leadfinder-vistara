@@ -65,6 +65,7 @@ const live: PlacesProvider = {
         maxResultCount: Math.min(limit, 20),
         locationBias: { circle: { radius: radiusMiles * 1609 } },
       }),
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`places ${res.status}`);
     const data = (await res.json()) as { places?: any[] };
@@ -99,6 +100,7 @@ const live: PlacesProvider = {
         "X-Goog-FieldMask": "places.displayName",
       },
       body: JSON.stringify({ textQuery: `${term} ${metro}`, maxResultCount: 3 }),
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`places pack ${res.status}`);
     const data = (await res.json()) as { places?: { displayName?: { text?: string } }[] };

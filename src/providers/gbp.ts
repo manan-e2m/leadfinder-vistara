@@ -70,6 +70,7 @@ const live: GbpProvider = {
           "places.id,places.displayName,places.primaryTypeDisplayName,places.rating,places.userRatingCount,places.businessStatus,places.reviews,places.editorialSummary",
       },
       body: JSON.stringify({ textQuery: businessName, maxResultCount: 1 }),
+      signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) throw new Error(`gbp ${res.status}`);
     const p = ((await res.json()) as any).places?.[0];
