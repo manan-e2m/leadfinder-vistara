@@ -184,6 +184,11 @@ const live: TechDetectProvider = {
 // auto mode like every other provider; only PROVIDER_MODE=mock (offline/
 // event fallback) pins it synthetic. The old ternary returned mock in auto,
 // contradicting both env.ts's docstring and the comment above it.
+// techdetect is a plain HTTP fetch with no API key — unlike keyed providers
+// there is no cost gate, so in auto mode it runs LIVE. (The old guard
+// `mode === "live" ? live : mock` pinned the mock in auto, whose random
+// BRAND_COLORS pick then overrode the real extracted brand colour — found
+// live-testing vercel.com: extractor said #0070f3, UI showed mock purple.)
 export const techdetect: TechDetectProvider =
-  env.providerMode === "live" ? live : mock;
+  env.providerMode === "mock" ? mock : live;
 
