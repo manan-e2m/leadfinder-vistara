@@ -29,7 +29,7 @@ export function Wordmark({ subtitle }: { subtitle?: string }) {
         className="brand-mark relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] text-[15px] font-extrabold leading-none tracking-tight text-white shadow-lift"
       >
         <span className="brand-mark-logo" aria-hidden />
-        <span className="relative z-10">
+        <span className="e2m-letter relative z-10">
           E<span className="text-white/95">2</span>M
         </span>
         {/* animated sheen sweeps across on hover */}

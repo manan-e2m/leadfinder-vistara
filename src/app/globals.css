@@ -171,6 +171,11 @@ h1, h2, h3 { letter-spacing: -0.025em; }
   background-position: center;
   background-repeat: no-repeat;
 }
+/* When an extracted logo is present (body[data-brand-logo="1"]) it REPLACES
+   the letter mark — CSS letters stay as the generated-brand fallback only. */
+body[data-brand-logo="1"] .brand-mark .e2m-letter {
+  opacity: 0;
+}
 .e2m-mark-sheen {
   position: absolute; inset: 0;
   background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 48%, transparent 66%);

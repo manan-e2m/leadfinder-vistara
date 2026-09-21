@@ -129,7 +129,23 @@ function absolutize(src: string, base: string): string | null {
 function isUsableLogo(url: string): boolean {
   if (!/^https?:\/\//i.test(url)) return false;
   // 1×1 tracking pixels and spacer gifs are not logos
-  return !/\b(?:pixel|1x1|blank|spacer|transparent)\b/i.test(url);
+  if (/\b(?:pixel|1x1|blank|spacer|transparent)\b/i.test(url)) return false;
+  // Squarespace/website-builder TEMPLATE placeholder marks: every site on the
+  // platform ships the same generic swirl/square logo. A "logo" fetched from
+  // assets.squarespace.com (or similar CDN paths) says nothing about THIS
+  // agency — rejecting it falls through to the next candidate (real favicon
+  // or generated letter avatar).
+  const GENERIC_HOSTS = [
+    "assets.squarespace.com/universal/",
+    "static1.squarespace.com/static/versioned-site-css/",
+    "cdn.squarespace.com/",
+    "website-files.com/", // webflow shared assets CDN
+    "assets.website-files.com/shared/",
+  ];
+  if (GENERIC_HOSTS.some((p) => url.toLowerCase().includes(p))) return false;
+  // Known builder placeholder file names regardless of host
+  if (/\/(?:damask|logo-light|logo-dark)\.(?:svg|png)\b/i.test(url)) return false;
+  return true;
 }
 
 /** (a) og:image · apple-touch-icon — big, usually high-quality marks. */

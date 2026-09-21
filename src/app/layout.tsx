@@ -24,7 +24,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased" style={cssVars}>
+      <body
+        className="min-h-screen antialiased"
+        style={cssVars}
+        data-brand-logo={theme.brand?.logoUrl ? "1" : "0"}
+      >
         <WithBrand theme={theme}>{children}</WithBrand>
       </body>
     </html>
