@@ -1,0 +1,21 @@
+node_modules
+.next
+.git
+.gitignore
+.turbo
+vercel
+*.log
+
+# local database and env — never ship
+prisma/dev.db
+prisma/dev.db-journal
+.env
+.env.*
+!.env.example
+
+# docs / editor
+README.md
+*.md
+.vscode
+.idea
+.DS_Store

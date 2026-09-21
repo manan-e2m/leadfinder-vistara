@@ -1,0 +1,18 @@
+# Local full-stack run: `docker compose up --build`
+# The app volume keeps the SQLite database (and any cache pools) across
+# container restarts — the entrypoint converges the schema on every boot.
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3100}:${PORT:-3100}"
+    environment:
+      - PORT=${PORT:-3100}
+      - DATABASE_URL=file:/data/dev.db
+      - PROVIDER_MODE=${PROVIDER_MODE:-auto}
+      # Add live keys here when not running in mock mode.
+      # - GOOGLE_PLACES_API_KEY=...
+    volumes:
+      - app-data:/data
+volumes:
+  app-data:
