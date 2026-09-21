@@ -33,6 +33,7 @@ export default function Progress({ runId }: { runId: string }) {
   useEffect(() => {
     let alive = true;
     let redirected = false;
+    let consecErrors = 0;
 
     async function poll() {
       try {
@@ -41,15 +42,22 @@ export default function Progress({ runId }: { runId: string }) {
         const json: ProgressResponse = await res.json();
         if (!alive) return;
         setData(json);
+        setError(false);
+        consecErrors = 0;
         if (json.terminal && !redirected) {
           redirected = true;
           setTimeout(() => router.replace(`/results/${runId}`), 650);
           return;
         }
       } catch {
+        consecErrors += 1;
         if (alive) setError(true);
       }
-      if (alive && !redirected) setTimeout(poll, 800);
+      if (alive && !redirected) {
+        // Gentle backoff while unhealthy: 800ms -> 2s -> 4s max. Reset on success.
+        const delay = Math.min(800 * 2 ** Math.max(consecErrors, 1), 4000);
+        setTimeout(poll, delay);
+      }
     }
     poll();
     return () => {
