@@ -12,7 +12,7 @@ const mock: PlacesProvider = {
     return pool.map<PlaceRecord>((b) => {
       const r = rng(`place|${b.slug}`);
       return {
-        externalId: `mock_place_${b.slug}`,
+        externalId: `mock_place_${b.slug}${b.sourceMismatch ? "__mismatch" : ""}`,
         name: b.name,
         website: b.parkedDomain ? `parked-${b.slug.slice(0, 18)}.com` : domainFor(b),
         phone: b.phone,
