@@ -1,5 +1,6 @@
 import { techdetect, gbp, adlibrary, llm } from "@/providers";
 import { CONFIDENCE_THRESHOLD, type Icp, type BrandAssets } from "@/lib/types";
+import { extractBrandFromSite, generatedAvatarColor } from "@/lib/brand";
 import { cacheGet, cacheSet, icpKey } from "@/lib/cache";
 import { logFailure } from "@/lib/logger";
 import type { RunBudget } from "@/lib/cost";
@@ -159,16 +160,27 @@ export async function inferIcp(args: {
     fromFallback: fellBackToQuestions,
   };
 
-  /* ── brand assets for the white-labeled audit ──────────────── */
+  /* ── brand assets for the white-labeled audit ────────────────
+   * Extraction chain (see src/lib/brand.ts): meta og:image/apple-touch →
+   * favicon → CSS colour harvest → logo img/svg candidates. When ALL of it
+   * fails we no longer mint a silent generic teal — we mark the brand
+   * `neutral` + `generated` and the UI renders a letter avatar with a
+   * "Using generated brand" hint. App. C
+   */
+  const extracted = await extractBrandFromSite(args.domain).catch(() => null);
+  const detectedColor = tech?.brandPrimaryColor ?? extracted?.primary ?? null;
+  const logoUrl = tech?.logoUrl ?? extracted?.logoUrl ?? null;
+  const detectionFailed = !tech?.reachable || (!detectedColor && !logoUrl);
   const brand: BrandAssets = {
-    logoUrl: tech?.logoUrl ?? null,
-    primary: tech?.brandPrimaryColor ?? "#0F6B6B",
+    logoUrl,
+    primary: detectedColor ?? generatedAvatarColor(args.agencyName || args.domain),
     secondary: "#08090C",
     tone: "direct, plain-spoken, no jargon",
     agencyName: args.agencyName,
     // Extraction failed → neutral template carrying their name and domain.
     // Still theirs, still sendable. App. C
-    neutral: !tech?.reachable || !tech?.brandPrimaryColor,
+    neutral: detectionFailed,
+    generated: detectionFailed,
   };
 
   const result: IcpResult = { icp, brand, sourcesUsed, fellBackToQuestions, siteFailure };

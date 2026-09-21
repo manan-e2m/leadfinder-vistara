@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { readJson } from "./json";
 import { fallbacksOf } from "@/pipeline/run";
+import { recoverIfStale } from "./runRecovery";
 import type { BrandAssets } from "./types";
 
 /**
@@ -83,6 +84,10 @@ export async function getRunResults(runId: string): Promise<RunView | null> {
     },
   });
   if (!run) return null;
+
+  // Restart recovery: a run left "running"/"queued" by a server restart is
+  // marked failed (past the staleness threshold) instead of spinning forever.
+  await recoverIfStale(run);
 
   const leads: LeadView[] = run.leads.map((l) => {
     const emailOpener = l.openers.find((o) => o.channel === "email") ?? null;

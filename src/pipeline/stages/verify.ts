@@ -32,7 +32,7 @@ export interface VerifyStageResult {
 const REASON_COPY: Record<string, string> = {
   permanently_closed: "Google Business Profile status: permanently closed",
   phone_format_invalid: "Listed phone fails format validation",
-  phone_carrier_lookup_failed: "Listed phone fails carrier lookup — number disconnected",
+  phone_carrier_lookup_failed: "Listed phone fails carrier lookup; number disconnected",
   email_syntax_invalid: "Listed email fails syntax validation",
   email_mx_lookup_failed: "Listed email domain has no MX record",
   site_parked_or_redirected: "Domain redirects to a parked page",

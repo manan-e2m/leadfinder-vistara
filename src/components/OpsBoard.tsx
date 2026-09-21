@@ -105,7 +105,7 @@ export default function OpsBoard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Panel title="Cache">
           {Object.keys(data.cache).length === 0 ? (
-            <p className="text-sm text-ink-40">Cold — no pools warmed yet.</p>
+            <p className="text-sm text-ink-40">Cold. No pools warmed yet.</p>
           ) : (
             <ul className="space-y-1.5">
               {Object.entries(data.cache).map(([kind, s]) => (
@@ -120,13 +120,13 @@ export default function OpsBoard() {
 
         <Panel title="Recent failures">
           {data.recentFailures.length === 0 ? (
-            <p className="text-sm text-ink-40">Clean — nothing logged.</p>
+            <p className="text-sm text-ink-40">Clean. Nothing logged.</p>
           ) : (
             <ul className="space-y-1.5">
               {data.recentFailures.map((f, i) => (
                 <li key={i} className="text-xs">
                   <span className="font-mono font-semibold text-crit">{f.stage}</span>
-                  <span className="text-ink-60"> — {f.reason}</span>
+                  <span className="text-ink-60">: {f.reason}</span>
                   {f.url && <span className="text-ink-40"> ({f.url})</span>}
                 </li>
               ))}

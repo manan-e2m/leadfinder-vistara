@@ -49,7 +49,7 @@ export async function personalize(args: {
     system:
       `You write first-touch prospecting openers for a marketing agency called ${brand.agencyName}. ` +
       `Their tone is ${brand.tone}. Write as that agency, to a prospect. ` +
-      `Cite the specific measured finding — never a generic claim. No flattery, no "I hope this finds you well", ` +
+      `Cite the specific measured finding, never a generic claim. No flattery, no "I hope this finds you well", ` +
       `no fake urgency. Two or three short paragraphs maximum for the email, two sentences for the phone opener. ` +
       `Keys: subject, body, phone.`,
     prompt:
@@ -93,8 +93,8 @@ function templateOpener(name: string, top: DetectedSignal[], brand: BrandAssets)
       emailSubject: `A quick look at ${name}`,
       emailBody:
         `I ran a short audit of ${name}'s web presence this week and pulled together what I found.\n\n` +
-        `Happy to send the one-pager over — worth ten minutes?`,
-      phoneOpener: `Hi — I ran a quick audit of ${name}'s website and Google presence. Is now a bad time to share what came up?`,
+        `Happy to send the one-pager over. Worth ten minutes?`,
+      phoneOpener: `Hi, I ran a quick audit of ${name}'s website and Google presence. Is now a bad time to share what came up?`,
     };
   }
 
@@ -102,11 +102,11 @@ function templateOpener(name: string, top: DetectedSignal[], brand: BrandAssets)
   return {
     emailSubject: subjectFor(first),
     emailBody:
-      `${first.label.replace(/^./, (c) => c.toLowerCase())} — specifically, ${first.measurement.toLowerCase()}.\n\n` +
+      `${first.label.replace(/^./, (c) => c.toLowerCase())}. Specifically, ${first.measurement.toLowerCase()}.\n\n` +
       (second ? `${second.label} as well: ${second.measurement.toLowerCase()}.\n\n` : "") +
       `I put together a one-page breakdown with the numbers behind each of these. Worth ten minutes?`,
     phoneOpener:
-      `Hi — I was looking at ${name}'s site and noticed ${first.measurement.toLowerCase()}. ` +
+      `Hi, I was looking at ${name}'s site and noticed ${first.measurement.toLowerCase()}. ` +
       `Is that something anyone's looking after right now?`,
   };
 }

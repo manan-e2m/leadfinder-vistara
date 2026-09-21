@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { CONFIDENCE_THRESHOLD, type Icp } from "@/lib/types";
+import { useBrand, BrandLogo } from "./BrandProvider";
 import { Chip } from "./ui";
 
 interface ScanResponse {
@@ -29,6 +30,7 @@ const FIELD_LABEL: Record<string, string> = {
 
 export default function ScanFlow() {
   const router = useRouter();
+  const { brand } = useBrand();
   const [phase, setPhase] = useState<"input" | "confirm">("input");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,7 +102,7 @@ export default function ScanFlow() {
           <h1 className="text-2xl font-bold tracking-tight text-ink">Find your next 20 clients</h1>
           <p className="mt-2 text-sm text-ink-60">
             Enter your agency&apos;s website. We read your footprint across six sources, then find verified,
-            scored, ready-to-contact prospects that match — in about a minute.
+            scored, ready-to-contact prospects that match. Takes about a minute.
           </p>
           <div className="mt-5 flex gap-2">
             <input
@@ -120,7 +122,7 @@ export default function ScanFlow() {
           </div>
           {error && <p className="mt-3 text-sm text-crit">{error}</p>}
           <p className="mt-4 text-xs text-ink-40">
-            No signup to see results. We draft outreach — you decide what to send.
+            No signup to see results. We draft outreach. You decide what to send.
           </p>
         </form>
       </div>
@@ -131,24 +133,33 @@ export default function ScanFlow() {
     <div className="mx-auto w-full max-w-xl">
       <div className="animate-rise rounded-board border border-line bg-surface p-6 shadow-board">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-ink">{scan.brand.agencyName}</h2>
-            <p className="text-xs text-ink-40">{scan.domain}</p>
+          <div className="flex items-center gap-3">
+            <BrandLogo size={36} />
+            <div>
+              <h2 className="text-lg font-bold text-ink">{scan.brand.agencyName}</h2>
+              <p className="text-xs text-ink-40">{scan.domain}</p>
+            </div>
           </div>
           <Chip tone="blue">{scan.sourcesUsed.length} sources read</Chip>
         </div>
+
+        {brand.generated && (
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-ink-40">
+            Using a generated brand. We couldn&apos;t read your logo or colours from your site.
+          </p>
+        )}
 
         {scan.corrected && (
           <p className="mt-2 text-xs text-ink-40">Assuming you meant {scan.domain}.</p>
         )}
         {scan.siteFailure && (
           <p className="mt-2 text-xs text-warn">
-            Your site was hard to read — we filled this in from your other listings. Confirm below.
+            Your site was hard to read. We filled this in from your other listings. Confirm below.
           </p>
         )}
 
         <p className="mt-4 text-sm text-ink-60">
-          Here&apos;s what we inferred about who you sell to. Tap to confirm or correct — this picks your
+          Here&apos;s what we inferred about who you sell to. Tap to confirm or correct; this picks your
           sourcing route.
         </p>
 
@@ -174,7 +185,7 @@ export default function ScanFlow() {
                 {f.value && !weak ? (
                   <p className="mt-1.5 text-[15px] font-medium text-ink">{f.value}</p>
                 ) : (
-                  <p className="mt-1.5 text-sm text-ink-60">We&apos;re not sure — pick the closest:</p>
+                  <p className="mt-1.5 text-sm text-ink-60">We&apos;re not sure. Pick the closest:</p>
                 )}
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -209,7 +220,7 @@ export default function ScanFlow() {
             disabled={loading}
             className="press flex-1 rounded-board bg-blue px-5 py-3 text-sm font-semibold text-white shadow-lift transition hover:bg-blue-deep disabled:opacity-50"
           >
-            {loading ? "Starting…" : "Looks right — find my prospects"}
+            {loading ? "Starting…" : "Looks right. Find my prospects"}
           </button>
           <button
             onClick={() => setPhase("input")}

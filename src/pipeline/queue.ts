@@ -1,5 +1,6 @@
 import { executeRun } from "./run";
 import { log } from "@/lib/logger";
+import { markRunActive, markRunInactive } from "@/lib/runRecovery";
 import type { Icp, BrandAssets } from "@/lib/types";
 
 /**
@@ -29,8 +30,20 @@ interface Job {
 const pending: Job[] = [];
 const active = new Set<string>();
 
+/** True when this process already has the run queued or executing. */
+export function isQueuedOrActive(runId: string): boolean {
+  return active.has(runId) || pending.some((j) => j.runId === runId);
+}
+
 export function enqueue(job: Job) {
+  // In-process lock: a double-click that lands in the same tick (or a
+  // re-click while waiting) must not create a second execution.
+  if (isQueuedOrActive(job.runId)) {
+    log("warn", "queue", `duplicate enqueue ignored for ${job.runId}`);
+    return;
+  }
   pending.push(job);
+  markRunActive(job.runId);
   log("info", "queue", `enqueued ${job.runId} (${pending.length} waiting, ${active.size} active)`);
   drain();
 }
@@ -47,6 +60,7 @@ function drain() {
       .catch((e) => log("error", "queue", `${job.runId} threw: ${e.message}`))
       .finally(() => {
         active.delete(job.runId);
+        markRunInactive(job.runId);
         drain();
       });
   }

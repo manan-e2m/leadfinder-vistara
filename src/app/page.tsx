@@ -24,7 +24,7 @@ export default function Home() {
           <div className="mx-auto mb-9 max-w-2xl text-center">
             <span className="animate-pop inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-[11px] font-semibold text-blue-deep shadow-sm">
               <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-orange" />
-              Instant ICP-to-prospect engine for agencies
+              A prospecting engine that starts with your domain
             </span>
             <h1 className="mt-5 text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl">
               {["Your", "agency", "just", "got"].map((w, i) => (
@@ -41,7 +41,7 @@ export default function Home() {
             </h1>
             <p className="animate-rise mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-ink-60" style={{ animationDelay: "0.5s" }}>
               Enter your website. We read your footprint across six sources, then return verified,
-              scored, ready-to-contact prospects — each with a named gap and the number that proves it.
+              scored, ready-to-contact prospects. Every one comes with a named gap and the number that proves it.
             </p>
           </div>
 
@@ -50,8 +50,8 @@ export default function Home() {
           <div className="mx-auto mt-16 grid max-w-4xl gap-4 sm:grid-cols-3">
             {[
               { n: "01", t: "Verified, not scraped", d: "Every phone, email and business status is checked before a lead reaches your screen. Twelve real beats fifty with six bad numbers." },
-              { n: "02", t: "Scored on the arithmetic", d: "Fit × Pain × Ability to pay × Reachability — every component shown, never hidden behind one number." },
-              { n: "03", t: "A gap, with proof", d: "Not a company record. A company plus a named gap plus the measurement — and the E2M service that fixes it." },
+              { n: "02", t: "Scored on the arithmetic", d: "Fit × Pain × Ability to pay × Reachability. Every component shown, none hidden behind one number." },
+              { n: "03", t: "A gap, with proof", d: "Not a company record. A company, a named gap, the measurement that proves it, and the E2M service that fixes it." },
             ].map((c, i) => (
               <div
                 key={c.n}

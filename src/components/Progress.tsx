@@ -127,7 +127,7 @@ export default function Progress({ runId }: { runId: string }) {
         )}
 
         {data?.terminal && (
-          <p className="mt-4 text-center text-sm text-ok">Done — opening your shortlist…</p>
+          <p className="mt-4 text-center text-sm text-ok">Done. Opening your shortlist…</p>
         )}
         {error && (
           <p className="mt-4 text-center text-sm text-ink-40">Reconnecting…</p>

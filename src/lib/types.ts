@@ -46,6 +46,10 @@ export const BrandAssets = z.object({
   /** true when extraction failed and we fell back to a neutral template
    *  carrying their name and domain. Still theirs, still sendable. */
   neutral: z.boolean().default(false),
+  /** true when nothing at all could be extracted: the UI renders a
+   *  generated letter-avatar (first letter of the company name) instead of
+   *  a logo and shows a small "Using generated brand" hint. */
+  generated: z.boolean().default(false),
 });
 export type BrandAssets = z.infer<typeof BrandAssets>;
 

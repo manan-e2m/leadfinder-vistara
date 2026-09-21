@@ -1,4 +1,5 @@
 import { useLive, env } from "@/lib/env";
+import { isBlockedHostSync } from "@/lib/urlGuard";
 import type { TechDetectProvider, TechProfile } from "./types";
 import { rng, int, chance, pick } from "./fixtures";
 
@@ -107,6 +108,13 @@ const live: TechDetectProvider = {
   name: "techdetect/live",
   live: true,
   async profile(url) {
+    // SSRF guard (cheap, literal-only): candidates' domains come from
+    // provider responses, but a poisoned/misparsed record must not turn
+    // into a fetch of localhost or a cloud metadata endpoint. Full DNS
+    // resolution checks happen at the /api/scan boundary.
+    if (isBlockedHostSync(url)) {
+      return { ...EMPTY, failureKind: "dns", responseMs: 0 };
+    }
     const target = url.startsWith("http") ? url : `https://${url}`;
     const started = Date.now();
     let res: Response;

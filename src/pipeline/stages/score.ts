@@ -91,7 +91,7 @@ function scoreOne(c: VerifiedCandidate, icp: Icp, fitOnly: boolean): ScoredLead 
     candidate: c,
     breakdown: { fit, pain, pay, reach, total },
     headlineGap: fitOnly
-      ? "Findings pending — audits are still catching up for this prospect"
+      ? "Findings pending; audits are still catching up for this prospect"
       : top.slice(0, 2).map((s) => s.measurement).join(" · ") || "No gaps detected in the audited families",
     tagLabel: tagFor(top),
     benchmark: top.find((s) => s.benchmark)?.benchmark ?? null,

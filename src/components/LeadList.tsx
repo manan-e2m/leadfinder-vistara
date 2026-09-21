@@ -24,10 +24,10 @@ export default function LeadList({ view }: { view: RunView }) {
           msg: `Pushed ${data.count} to ${provider === "ghl" ? "GoHighLevel" : "HubSpot"}${data.live ? "" : " (mock)"}.`,
         });
       } else {
-        setCrm({ state: "done", msg: `Push failed — use the CSV instead. (${data.error ?? "error"})` });
+        setCrm({ state: "done", msg: `Push failed. Use the CSV instead. (${data.error ?? "error"})` });
       }
     } catch {
-      setCrm({ state: "done", msg: "Push failed — use the CSV instead." });
+      setCrm({ state: "done", msg: "Push failed. Use the CSV instead." });
     }
   }
 
@@ -139,7 +139,7 @@ function LeadCard({ lead, index, open, onToggle }: { lead: LeadView; index: numb
               );
             })}
             {lead.signals.length === 0 && (
-              <li className="text-xs text-ink-40">Audits are still catching up for this prospect — ranked on fit.</li>
+              <li className="text-xs text-ink-40">Audits are still catching up for this prospect; ranked on fit.</li>
             )}
           </ul>
 

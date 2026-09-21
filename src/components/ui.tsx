@@ -13,10 +13,22 @@ export const FAMILY_LABEL: Record<string, string> = {
   web: "Web", ecommerce: "eCommerce", seo: "SEO", ppc: "PPC", content: "Content", ai: "AI intake",
 };
 
+/**
+ * App-chrome logo mark. Server-component-safe: it reads the centralized
+ * brand through the CSS variables that layout.tsx injects on <body>
+ * (--logo-url / --brand-primary), so the extracted logo + colors apply
+ * across the whole platform, not just the audit page. When nothing was
+ * extracted (--logo-url: none) it falls back to a generated letter mark —
+ * the "Using generated brand" hint is rendered by the client-side
+ * <BrandLogo> (see components/BrandProvider.tsx) where the context lives.
+ */
 export function Wordmark({ subtitle }: { subtitle?: string }) {
   return (
     <div className="group flex items-center gap-2.5">
-      <span className="e2m-mark relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] text-[15px] font-extrabold leading-none tracking-tight text-white shadow-lift">
+      <span
+        className="brand-mark relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] text-[15px] font-extrabold leading-none tracking-tight text-white shadow-lift"
+      >
+        <span className="brand-mark-logo" aria-hidden />
         <span className="relative z-10">
           E<span className="text-white/95">2</span>M
         </span>

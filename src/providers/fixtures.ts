@@ -6,7 +6,7 @@
  *      same businesses, so a demo is repeatable and a screenshot stays true.
  *   2. Obviously synthetic. Names are invented and every phone number is in
  *      the 555 reserved range. Nothing here can be mistaken for a real
- *      business — that matters, because one fabricated business shown to a
+ *      business. That matters, because one fabricated business shown to a
  *      room of agency owners ends the product's credibility. Plan §1
  */
 
@@ -91,7 +91,7 @@ export interface SyntheticBusiness {
   locationCount: number;
   hasWebsite: boolean;
   closed: boolean;
-  /** disagreement between sources — trips the two-source agreement check */
+  /** disagreement between sources; trips the two-source agreement check */
   sourceMismatch: boolean;
   disconnectedPhone: boolean;
   parkedDomain: boolean;
@@ -99,8 +99,8 @@ export interface SyntheticBusiness {
 
 /**
  * The candidate pool for a metro + vertical. A deliberate ~8% of the pool is
- * built to fail verification — closed businesses, disconnected numbers,
- * parked domains, cross-source name mismatches — because the verification
+ * built to fail verification: closed businesses, disconnected numbers,
+ * parked domains, cross-source name mismatches. The verification
  * stage has to be exercised on every run, not just in tests. Plan §9.4
  */
 export function syntheticPool(metro: string, vertical: string, count: number): SyntheticBusiness[] {

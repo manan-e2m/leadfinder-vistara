@@ -59,7 +59,7 @@ export function decideRoute(icp: Icp): RouteDecision {
     primary,
     auditFamilies,
     reason: defaulted
-      ? `Vertical confidence ${(icp.targetVerticals.confidence * 100).toFixed(0)}% — defaulted to the local-service route, retrying a better match in the background`
+      ? `Vertical confidence ${(icp.targetVerticals.confidence * 100).toFixed(0)}%, defaulted to the local-service route; retrying a better match in the background`
       : `Confirmed card selected ${list.join(" + ")} from vertical "${vertical || "unspecified"}" and services "${services || "unspecified"}"`,
     defaulted,
   };

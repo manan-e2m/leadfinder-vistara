@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 
 const FALLBACK_COPY: Record<string, string> = {
   route: "Route was defaulted while a better vertical match retried in the background.",
-  source: "Sourcing degraded — showed cached results.",
-  "audit:cost_cap": "Cost cap reached — some audits were skipped.",
-  "score:fit_only": "Audits didn't complete — ranked on fit alone.",
+  source: "Sourcing degraded. We showed cached results.",
+  "audit:cost_cap": "Cost cap reached, so some audits were skipped.",
+  "score:fit_only": "Audits didn't complete. Ranked on fit alone.",
 };
 
 export default async function ResultsPage({ params }: { params: Promise<{ runId: string }> }) {
@@ -35,7 +35,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
         <div className="mb-5">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-ink">Prospects for {title}</h1>
-            {view.status === "degraded" && <Chip tone="warn">degraded — still real</Chip>}
+            {view.status === "degraded" && <Chip tone="warn">degraded, still real</Chip>}
             {view.mode === "precomputed" && <Chip tone="blue">precomputed</Chip>}
           </div>
           <p className="mt-1.5 text-sm text-ink-60">
@@ -60,8 +60,8 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
         {view.leads.length === 0 ? (
           <div className="rounded-board border border-line bg-surface p-8 text-center">
             <p className="text-sm text-ink-60">
-              No prospects cleared verification this time. That&apos;s the honest result — nothing padded to
-              hit a number.
+              No prospects cleared verification this time. That&apos;s the honest result. We never pad the
+              list to hit a number.
             </p>
             <Link href="/" className="mt-3 inline-block text-sm font-semibold text-blue hover:text-blue-deep">
               Try another scan
