@@ -86,7 +86,7 @@ export default function LeadList({ view }: { view: RunView }) {
 
   return (
     <div>
-      <div className="sticky top-0 z-10 -mx-6 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-page/90 px-6 py-3 backdrop-blur">
+      <div className="animate-rise sticky top-0 z-10 -mx-6 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-page/90 px-6 py-3 backdrop-blur">
         <p className="text-sm text-ink-60">
           <span className="font-semibold text-ink">{view.leads.length} prospects</span> ready to contact
         </p>
