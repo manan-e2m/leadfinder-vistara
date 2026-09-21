@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { normalizeDomain } from "@/lib/domain";
 import { CONFIDENCE_THRESHOLD, type Icp } from "@/lib/types";
 import { useBrand, BrandLogo } from "./BrandProvider";
 import { Chip } from "./ui";
+
+/** Booth-demo fixture agency; seeded by prisma/seed.ts and served from mock. */
+const DEMO_DOMAIN = "harborandoak.com";
 
 interface ScanResponse {
   workspaceId: string;
@@ -37,20 +41,37 @@ export default function ScanFlow() {
   const [error, setError] = useState<string | null>(null);
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const [icp, setIcp] = useState<Icp | null>(null);
+  /** the registrable domain actually being scanned, shown under the input */
+  const [scanned, setScanned] = useState<string | null>(null);
 
-  async function runScan(e: React.FormEvent) {
-    e.preventDefault();
+  async function runScan(raw?: string) {
+    const value = raw ?? input;
+    // Paste cleanup before the request: 'https://www.acme.com/about' →
+    // acme.com. The same normalize runs server-side; doing it here too lets
+    // us show exactly what will be scanned and reject nonsense instantly.
+    const norm = normalizeDomain(value);
+    if (!norm.ok) {
+      setError(
+        "That doesn't look like a website. Try the bare domain, e.g. acmeagency.com — pasting a full URL is fine, we'll strip the rest."
+      );
+      return;
+    }
+    setScanned(norm.domain);
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input }),
+        body: JSON.stringify({ input: norm.domain }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message ?? "Something went wrong. Try again.");
+        setError(
+          data.error === "not_a_domain"
+            ? "That doesn't look like a website. Try the bare domain, e.g. acmeagency.com."
+            : (data.message ?? "Something went wrong. Try again.")
+        );
         return;
       }
       setScan(data);
@@ -119,9 +140,17 @@ export default function ScanFlow() {
   }
 
   if (phase === "input" || !scan || !icp) {
+    const liveNorm = normalizeDomain(input);
+    const cleaned = liveNorm.ok && liveNorm.domain !== input.trim().toLowerCase() ? liveNorm.domain : null;
     return (
       <div className="mx-auto w-full max-w-xl">
-        <form onSubmit={runScan} className="animate-rise rounded-board border border-line bg-surface p-6 shadow-board">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void runScan();
+          }}
+          className="animate-rise rounded-board border border-line bg-surface p-6 shadow-board"
+        >
           <h1 className="text-2xl font-bold tracking-tight text-ink">Find your next 20 clients</h1>
           <p className="mt-2 text-sm text-ink-60">
             Enter your agency&apos;s website. We read your footprint across six sources, then find verified,
@@ -143,7 +172,30 @@ export default function ScanFlow() {
               {loading ? "Reading…" : "Scan"}
             </button>
           </div>
+          {cleaned && (
+            <p className="mt-2 text-xs text-ink-60">
+              We&apos;ll scan <span className="font-mono font-semibold text-ink">{cleaned}</span> — the rest of
+              what you pasted is stripped.
+            </p>
+          )}
+          {scanned && error && !loading && (
+            <p className="mt-2 text-[11px] text-ink-40">Last attempt scanned {scanned}.</p>
+          )}
           {error && <p className="mt-3 text-sm text-crit">{error}</p>}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setInput(DEMO_DOMAIN);
+                void runScan(DEMO_DOMAIN);
+              }}
+              disabled={loading}
+              className="rounded-board border border-line-strong bg-page px-3 py-1.5 text-xs font-semibold text-ink-60 hover:border-blue hover:text-ink disabled:opacity-50"
+            >
+              Try a demo agency → harborandoak.com
+            </button>
+            <span className="text-xs text-ink-40">Runs the seeded fixture in mock mode — about 60s.</span>
+          </div>
           <p className="mt-4 text-xs text-ink-40">
             No signup to see results. We draft outreach. You decide what to send.
           </p>
@@ -176,9 +228,25 @@ export default function ScanFlow() {
           <p className="mt-2 text-xs text-ink-40">Assuming you meant {scan.domain}.</p>
         )}
         {scan.siteFailure && (
-          <p className="mt-2 text-xs text-warn">
-            Your site was hard to read. We filled this in from your other listings. Confirm below.
-          </p>
+          <div className="mt-2 rounded-board border border-warn/30 bg-warn-soft px-3 py-2">
+            <p className="text-xs font-semibold text-warn">
+              We couldn&apos;t read that website — check spelling or try the bare domain.
+            </p>
+            <p className="mt-0.5 text-[11px] text-warn">
+              We filled this card in from your other listings. Confirm below, or re-scan to retry.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setPhase("input");
+                void runScan(scan.domain);
+              }}
+              disabled={loading}
+              className="mt-2 rounded-board border border-warn bg-surface px-3 py-1.5 text-[11px] font-semibold text-warn hover:bg-warn-soft/60 disabled:opacity-50"
+            >
+              Retry scan of {scan.domain}
+            </button>
+          </div>
         )}
 
         <p className="mt-4 text-sm text-ink-60">
