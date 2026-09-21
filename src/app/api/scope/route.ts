@@ -13,10 +13,18 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const leadId = String(body.leadId ?? "");
-  const contactEmail = String(body.contactEmail ?? "").trim();
+  // Unbounded, unvalidated strings went straight into DB writes: a 1MB
+  // "note" or a garbage contactEmail row per double-click. Cap lengths and
+  // sanity-check the email shape before anything is persisted.
+  const contactEmail = String(body.contactEmail ?? "").trim().slice(0, 320);
+  const agencyName = String(body.agencyName ?? "").trim().slice(0, 120);
+  const note = String(body.note ?? "").trim().slice(0, 2000);
 
   if (!leadId || !contactEmail) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contactEmail)) {
+    return NextResponse.json({ error: "invalid_email", message: "That doesn't look like an email address." }, { status: 400 });
   }
 
   const lead = await db.lead.findUnique({
@@ -39,8 +47,8 @@ export async function POST(req: Request) {
       workspaceId: lead.run.workspaceId,
       leadId,
       contactEmail,
-      agencyName: String(body.agencyName ?? "") || null,
-      note: String(body.note ?? "") || null,
+      agencyName: agencyName || null,
+      note: note || null,
       status: "new",
       payloadJson: packJson(payload),
     },

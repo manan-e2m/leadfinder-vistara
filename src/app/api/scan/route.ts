@@ -5,6 +5,8 @@ import { normalizeDomain, agencyNameFromDomain } from "@/lib/domain";
 import { RunBudget } from "@/lib/cost";
 import { assertPublicDomain, BlockedHostError } from "@/lib/urlGuard";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
+import { env } from "@/lib/env";
+import { logFailure } from "@/lib/logger";
 import { inferIcp, needsConfirmation } from "@/pipeline/stages/icp";
 
 export const runtime = "nodejs";
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
     throw e;
   }
 
-  const providedName = String(body.agencyName ?? "").trim();
+  const providedName = String(body.agencyName ?? "").trim().slice(0, 120);
   const agencyName = providedName || agencyNameFromDomain(domain);
 
   // Only overwrite the stored name when the caller explicitly provides one —
@@ -74,13 +76,37 @@ export async function POST(req: Request) {
   });
 
   // Create the run up front so ICP-inference cost charges against a real row.
+  // mode used to be hardcoded "live" — the ops board mislabeled mock demos.
   const run = await db.run.create({
-    data: { workspaceId: workspace.id, status: "queued", mode: "live" },
+    data: {
+      workspaceId: workspace.id,
+      status: "queued",
+      mode: env.providerMode === "mock" ? "mock" : "live",
+    },
   });
 
-  const budget = new RunBudget(run.id);
-  const inferred = await inferIcp({ domain, agencyName, budget });
-  await budget.flush();
+  let inferred;
+  try {
+    const budget = new RunBudget(run.id);
+    inferred = await inferIcp({ domain, agencyName, budget });
+    await budget.flush();
+  } catch (e) {
+    // ICP inference throws on unexpected internal errors; without this the
+    // caller got a raw 500 with a stack trace. The run is already persisted,
+    // so mark it failed rather than leaving a phantom queued row (which the
+    // stale-run recovery would otherwise flag for 3+ minutes).
+    await db.run
+      .updateMany({
+        where: { id: run.id, status: { notIn: ["complete", "degraded", "failed"] } },
+        data: { status: "failed" },
+      })
+      .catch(() => {});
+    await logFailure({ stage: "icp", reason: (e as Error).message, url: domain, runId: run.id });
+    return NextResponse.json(
+      { error: "icp_failed", message: "We couldn't read your site's footprint. Try again in a moment." },
+      { status: 502 }
+    );
+  }
 
   await db.workspace.update({
     where: { id: workspace.id },
