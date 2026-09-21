@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { packJson, readJson } from "@/lib/json";
 import { log, logFailure } from "@/lib/logger";
 import { RunBudget } from "@/lib/cost";
-import { resetLlmBudget } from "@/providers";
+import { resetLlmBudget, runLlmScope } from "@/providers";
 import { markRunInactive, markRunActive } from "@/lib/runRecovery";
 import type { Icp, BrandAssets, RouteDecision } from "@/lib/types";
 import { decideRoute } from "./stages/route";
@@ -38,11 +38,23 @@ export async function executeRun(args: {
   icp: Icp;
   brand: BrandAssets;
 }): Promise<void> {
+  // Scope the per-run LLM token ledger to this run's async chain so
+  // concurrent runs each enforce their own LLM_MAX_TOKENS_PER_RUN.
+  return runLlmScope(args.runId, () => executeRunInner(args));
+}
+
+async function executeRunInner(args: {
+  runId: string;
+  workspaceId: string;
+  domain: string;
+  icp: Icp;
+  brand: BrandAssets;
+}): Promise<void> {
   const { runId, workspaceId, domain, icp, brand } = args;
   const budget = new RunBudget(runId);
   const fallbacks: string[] = [];
   const startedAt = Date.now();
-  resetLlmBudget();
+  resetLlmBudget(runId);
   markRunActive(runId);
 
   const stage = async <T,>(

@@ -9,7 +9,7 @@ export { adlibrary } from "./adlibrary";
 export { gbp } from "./gbp";
 export { b2b } from "./b2b";
 export { verify, isRoleAddress } from "./verify";
-export { llm, resetLlmBudget } from "./llm";
+export { llm, resetLlmBudget, runLlmScope } from "./llm";
 export { ghl, hubspot, crmFor } from "./crm";
 export { email } from "./email";
 export { benchmark } from "./benchmark";
