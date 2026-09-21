@@ -10,7 +10,12 @@ export const dynamic = "force-dynamic";
  */
 function csvCell(v: unknown): string {
   const s = v === null || v === undefined ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  // CSV formula injection: a cell starting with = + - @ (or a tab/CR used
+  // to smuggle them past naive clients) executes as a formula when the
+  // export opens in Excel/Sheets. Business names and opener text come from
+  // third-party sources and LLM output, so prefix-quoting is not optional.
+  const safe = /^[=+@\t\r-]/.test(s) ? `'${s}` : s;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 const HEADERS = [
