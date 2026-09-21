@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { CONFIDENCE_THRESHOLD, type Icp } from "@/lib/types";
+import { useBrand, BrandLogo } from "./BrandProvider";
 import { Chip } from "./ui";
 
 interface ScanResponse {
@@ -29,6 +30,7 @@ const FIELD_LABEL: Record<string, string> = {
 
 export default function ScanFlow() {
   const router = useRouter();
+  const { brand } = useBrand();
   const [phase, setPhase] = useState<"input" | "confirm">("input");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -131,12 +133,21 @@ export default function ScanFlow() {
     <div className="mx-auto w-full max-w-xl">
       <div className="animate-rise rounded-board border border-line bg-surface p-6 shadow-board">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-ink">{scan.brand.agencyName}</h2>
-            <p className="text-xs text-ink-40">{scan.domain}</p>
+          <div className="flex items-center gap-3">
+            <BrandLogo size={36} />
+            <div>
+              <h2 className="text-lg font-bold text-ink">{scan.brand.agencyName}</h2>
+              <p className="text-xs text-ink-40">{scan.domain}</p>
+            </div>
           </div>
           <Chip tone="blue">{scan.sourcesUsed.length} sources read</Chip>
         </div>
+
+        {brand.generated && (
+          <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-ink-40">
+            Using generated brand — we couldn&apos;t read your logo or colours from your site
+          </p>
+        )}
 
         {scan.corrected && (
           <p className="mt-2 text-xs text-ink-40">Assuming you meant {scan.domain}.</p>

@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { readJson } from "@/lib/json";
 import { brandCssVars } from "@/lib/brandTheme";
-import { generatedAvatarColor } from "@/lib/brand";
 import type { BrandAssets } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -100,10 +99,16 @@ export default async function AuditPage({ params }: { params: Promise<{ token: s
               </ul>
             </div>
 
-            <div className="mt-6 rounded-board p-4" style={{ background: "var(--agency-soft, #e5f2f2)" }}>
-              <h3 className="text-sm font-bold" style={{ color: brand.primary }}>Recommended next step</h3>
+            <div className="mt-6 rounded-board p-4" style={{ background: "var(--brand-soft, #e5f2f2)" }}>
+              <h3 className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>Recommended next step</h3>
               <p className="mt-1 text-sm text-ink-80">{doc.planSummary}</p>
             </div>
+
+            {brand.generated && (
+              <p className="mt-3 text-[10px] font-medium uppercase tracking-wide text-ink-40">
+                Using generated brand
+              </p>
+            )}
 
             <p className="mt-6 border-t border-line pt-4 text-[11px] text-ink-40">
               Prepared by {brand.agencyName || "your agency"}. Findings are measured from public signals and
