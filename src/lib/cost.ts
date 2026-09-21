@@ -49,6 +49,10 @@ export class RunBudget {
 
   /** Record spend. Returns false once the cap is hit so the caller degrades. */
   async charge(op: string, units = 1, provider = "unknown"): Promise<boolean> {
+    // Mock mode spends nothing real — charging real unit costs against the
+    // cap made demos degrade into template openers mid-audit (340 pool
+    // audits burn the 45c cap fast) for money that was never spent.
+    if (env.providerMode === "mock") return true;
     const cents = (UNIT_COST_CENTS[op] ?? 0) * units;
     if (this.spent + cents > this.capCents) {
       if (!this.capped) {

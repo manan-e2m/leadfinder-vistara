@@ -343,6 +343,20 @@ model FailureLog {
   @@index([stage, createdAt])
 }
 
+/// Durable record of what the in-process queue holds. Written at enqueue
+/// time so a server restart re-enqueues the job instead of orphaning the
+/// run. Read only by the startup sweep in instrumentation.ts; deleted on
+/// completion. Queue depth in SQLite is tiny (walk-ins), so this is a
+/// bridge, not a replacement for a real broker. Plan §5.8
+model RunQueue {
+  id         String   @id @default(cuid())
+  runId      String   @unique
+  /// queued | running | done
+  status     String   @default("queued")
+  enqueuedAt DateTime @default(now())
+  payloadJson String?
+}
+
 /// Registration export from the events team. Every registered attendee is
 /// pre-run and hand-QA'd weeks out, so on the day they get an instant,
 /// correct result and never touch the fallback path. Plan §6.7, §12.1

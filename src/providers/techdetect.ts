@@ -180,8 +180,10 @@ const live: TechDetectProvider = {
   },
 };
 
-// No dedicated key — live detection is just an HTTP fetch, so it is on
-// unless the whole platform is pinned to mock (offline/event fallback).
+// No dedicated key — live detection is just an HTTP fetch, so it runs in
+// auto mode like every other provider; only PROVIDER_MODE=mock (offline/
+// event fallback) pins it synthetic. The old ternary returned mock in auto,
+// contradicting both env.ts's docstring and the comment above it.
 export const techdetect: TechDetectProvider =
-  env.providerMode === "mock" ? mock : env.providerMode === "live" ? live : mock;
+  env.providerMode === "live" ? live : mock;
 

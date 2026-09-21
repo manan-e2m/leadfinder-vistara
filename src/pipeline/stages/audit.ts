@@ -123,18 +123,24 @@ async function auditOne(args: {
   const canSpend = budget.canAfford("techdetect.fetch");
   if (!canSpend) degradedByCost = true;
 
+  const ranTech = Boolean(domain && canSpend);
+  const ranSpeed = Boolean(domain && wantSpeed && canSpend);
+  const ranAds = Boolean(wantAds && canSpend);
+  const ranGbp = Boolean(wantGbp && canSpend);
+
   const [tech, speed, ads, profile] = await Promise.all([
-    domain && canSpend ? techdetect.profile(domain).catch(() => null) : Promise.resolve(null),
-    domain && wantSpeed && canSpend ? pagespeed.run(domain).catch(() => null) : Promise.resolve(null),
-    wantAds && canSpend ? adlibrary.lookup({ businessName: place.name, domain, metro: icp.metro }).catch(() => null) : Promise.resolve(null),
-    wantGbp && canSpend ? gbp.lookup({ businessName: place.name, domain }).catch(() => null) : Promise.resolve(null),
+    ranTech ? techdetect.profile(domain).catch(() => null) : Promise.resolve(null),
+    ranSpeed && domain ? pagespeed.run(domain).catch(() => null) : Promise.resolve(null),
+    ranAds ? adlibrary.lookup({ businessName: place.name, domain, metro: icp.metro }).catch(() => null) : Promise.resolve(null),
+    ranGbp ? gbp.lookup({ businessName: place.name, domain }).catch(() => null) : Promise.resolve(null),
   ]);
 
-  if (canSpend) {
-    await budget.charge("techdetect.fetch", 1, "techdetect");
-    if (wantSpeed) await budget.charge("pagespeed.run", 1, "pagespeed");
-    if (wantGbp) await budget.charge("gbp.lookup", 1, "gbp");
-  }
+  // Charge only for calls that actually went out — previously B2B records
+  // without a website still burned techdetect.fetch against the cap, and
+  // failed lookups charged as if they had succeeded.
+  if (ranTech) await budget.charge("techdetect.fetch", 1, "techdetect");
+  if (ranSpeed) await budget.charge("pagespeed.run", 1, "pagespeed");
+  if (ranGbp) await budget.charge("gbp.lookup", 1, "gbp");
 
   let localPack: AuditContext["localPack"] = [];
   if (wantPack && canSpend) {

@@ -60,8 +60,10 @@ export async function inferIcp(args: {
     gbp.lookup({ businessName: args.agencyName, domain: args.domain }).catch(() => null),
     adlibrary.lookup({ businessName: args.agencyName, domain: args.domain }).catch(() => null),
   ]);
-  await args.budget.charge("techdetect.fetch", 1, "techdetect");
-  await args.budget.charge("gbp.lookup", 1, "gbp");
+  // Only charge for lookups that were actually attempted — a failed fetch
+  // (caught to null) is not a spent API call.
+  if (tech || profile) await args.budget.charge("techdetect.fetch", 1, "techdetect");
+  if (profile) await args.budget.charge("gbp.lookup", 1, "gbp");
 
   const sourcesUsed: string[] = [];
   if (tech?.reachable) sourcesUsed.push("Agency website");
