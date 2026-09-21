@@ -193,11 +193,11 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 /* Vertical scanline that sweeps the run card while a shortlist builds. */
 @keyframes scanline {
   0% { transform: translateY(-100%); opacity: 0; }
-  12% { opacity: 1; }
-  88% { opacity: 1; }
+  18% { opacity: 1; }
+  82% { opacity: 1; }
   100% { transform: translateY(1000%); opacity: 0; }
 }
-.animate-scanline { animation: scanline 3.4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-scanline { animation: scanline 7s linear infinite; }
 
 /* Diagonal light sweep — scan button, audit header. */
 @keyframes sheen {

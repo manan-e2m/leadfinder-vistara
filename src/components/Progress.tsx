@@ -153,7 +153,7 @@ export default function Progress({ runId }: { runId: string }) {
           <>
             <div className="relative mt-5 h-1 overflow-hidden rounded-full bg-surface-2">
               <div
-                className="h-full rounded-full transition-[width] duration-300 ease-linear"
+                className="h-full rounded-full transition-[width] duration-700 ease-out"
                 style={{
                   width: `${pct}%`,
                   background: "linear-gradient(90deg, var(--e2m-blue), var(--e2m-orange))",
