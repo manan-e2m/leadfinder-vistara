@@ -14,6 +14,24 @@ const FALLBACK_COPY: Record<string, string> = {
   "score:fit_only": "Audits didn't complete. Ranked on fit alone.",
 };
 
+/**
+ * "Why fewer leads" — built only from the run's own numbers and fallback
+ * flags, never filler. Rendered when a run passes fewer than 5 leads so an
+ * agency owner doesn't read a short list as a broken tool.
+ */
+function fewerLeadsExplainer(view: NonNullable<Awaited<ReturnType<typeof getRunResults>>>): string {
+  const c = view.counts;
+  const reasons: string[] = [];
+  if (c.heldBack > 0)
+    reasons.push(`${c.heldBack} prospects were held back on verification (bad phone, closed, or missing site) — we never pad the list with them.`);
+  if (view.fallbacks.includes("audit:cost_cap")) reasons.push("the cost cap stopped some audits partway.");
+  if (view.fallbacks.includes("score:fit_only")) reasons.push("audits didn't complete, so ranking ran on fit alone.");
+  if (view.fallbacks.includes("source") || view.fallbacks.includes("route")) reasons.push("sourcing was degraded and used cached listings only.");
+  if (c.candidate > 0 && c.candidate < 5) reasons.push(`only ${c.candidate} candidates matched this vertical/geo in our source coverage.`);
+  const tail = reasons.length ? ` This short list is because ${reasons.join(" ")}` : " Vertical coverage and filter strictness vary by metro — a re-scan with a wider vertical or a nearby metro usually returns more.";
+  return `${c.candidate} businesses were sourced and audited; ${c.lead} cleared every check.${tail}`;
+}
+
 export default async function ResultsPage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
 
@@ -71,12 +89,21 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
               No prospects cleared verification this time. That&apos;s the honest result. We never pad the
               list to hit a number.
             </p>
+            <p className="mt-3 text-xs text-ink-40">{fewerLeadsExplainer(view)}</p>
             <Link href="/" className="mt-3 inline-block text-sm font-semibold text-blue hover:text-blue-deep">
               Try another scan
             </Link>
           </div>
         ) : (
-          <LeadList view={view} />
+          <>
+            {view.leads.length < 5 && (
+              <p className="mb-4 rounded-board border border-line bg-surface-2 px-4 py-2.5 text-xs leading-relaxed text-ink-60">
+                <span className="font-semibold text-ink">Why fewer leads: </span>
+                {fewerLeadsExplainer(view)}
+              </p>
+            )}
+            <LeadList view={view} />
+          </>
         )}
       </div>
     </main>
