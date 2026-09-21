@@ -385,11 +385,20 @@ export default function ScanFlow() {
                 )}
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {f.options.map((opt) => {
-                    const isMulti = MULTI_FIELDS.has(key);
-                    const selected = isMulti
-                      ? f.value.split(",").map((s) => s.trim()).includes(opt) && f.value !== ""
-                      : f.value === opt;
+                  {(() => {
+                    // Don't render an option chip for something already picked
+                    // (the selected capsules above already show it — showing
+                    // both is the "same chip twice" bug). Custom added terms
+                    // that aren't in options also hide their bare duplicate.
+                    const picked = isMultiField
+                      ? new Set(f.value.split(",").map((s) => s.trim()).filter(Boolean))
+                      : new Set(f.value ? [f.value] : []);
+                    const visible = f.options.filter((opt) => !picked.has(opt));
+                    return visible.map((opt) => {
+                      const isMulti = MULTI_FIELDS.has(key);
+                      const selected = isMulti
+                        ? f.value.split(",").map((s) => s.trim()).includes(opt) && f.value !== ""
+                        : f.value === opt;
                     return (
                       <button
                         key={opt}
@@ -403,8 +412,9 @@ export default function ScanFlow() {
                       >
                         {opt}
                       </button>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                   {/* "Add your own" capsule + inline input. */}
                   {customOpen[key] ? (
                     <span className="inline-flex items-center gap-1.5">
