@@ -109,6 +109,65 @@ export default function ScanFlow() {
    * on [,&]). */
   const MULTI_FIELDS = new Set(["targetVerticals", "servicesOffered"]);
 
+  /* ── custom capsules and user-added fields ────────────────────
+   * Every card gets a "+ Add" capsule: type any term, it becomes a chip on
+   * that card (multi fields join it into the same comma contract; single
+   * fields take it as the value). "＋ Add your own" appends a brand-new
+   * labeled card — label + free-text value — carried through to the run as
+   * icp.custom so the pipeline and outreach copy can reference it. */
+  const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
+  const [customDraft, setCustomDraft] = useState<Record<string, string>>({});
+  const [customFields, setCustomFields] = useState<{ label: string; value: string }[]>([]);
+  const [addFieldOpen, setAddFieldOpen] = useState(false);
+  const [addFieldLabel, setAddFieldLabel] = useState("");
+  const [addFieldValue, setAddFieldValue] = useState("");
+
+  function setDraft(key: string, text: string) {
+    setCustomDraft((d) => ({ ...d, [key]: text }));
+  }
+
+  function commitCustom(key: (typeof FIELD_ORDER)[number], isMulti: boolean) {
+    const text = (customDraft[key] ?? "").trim();
+    if (!text || !icp) return;
+    if (isMulti) {
+      const f = icp[key];
+      const current = f.value.split(",").map((s) => s.trim()).filter(Boolean);
+      const next = [...current, text];
+      setIcp({
+        ...icp,
+        [key]: { ...f, value: next.join(", "), confirmed: true, confidence: Math.max(f.confidence, 0.9) },
+      });
+    } else {
+      setField(key, text);
+    }
+    setCustomDraft((d) => ({ ...d, [key]: "" }));
+    setCustomOpen((o) => ({ ...o, [key]: false }));
+  }
+
+  function removeCapsule(key: (typeof FIELD_ORDER)[number], isMulti: boolean, opt: string) {
+    if (!isMulti || !icp) return;
+    const f = icp[key];
+    const current = f.value.split(",").map((s) => s.trim()).filter(Boolean);
+    setIcp({
+      ...icp,
+      [key]: { ...f, value: current.filter((v) => v !== opt).join(", "), confirmed: current.length > 1 },
+    });
+  }
+
+  function addCustomField() {
+    const label = addFieldLabel.trim();
+    const value = addFieldValue.trim();
+    if (!label) return;
+    setCustomFields((f) => (f.some((x) => x.label === label) ? f : [...f, { label, value }]));
+    setAddFieldLabel("");
+    setAddFieldValue("");
+    setAddFieldOpen(false);
+  }
+
+  function removeCustomField(label: string) {
+    setCustomFields((f) => f.filter((x) => x.label !== label));
+  }
+
   function toggleMulti(key: "targetVerticals" | "servicesOffered", opt: string) {
     if (!icp) return;
     const f = icp[key];
@@ -133,7 +192,7 @@ export default function ScanFlow() {
     if (!scan || !icp) return;
     setLoading(true);
     // Mark every field confirmed; the pipeline trusts the confirmed card.
-    const confirmedIcp: Icp = { ...icp };
+    const confirmedIcp: Icp = { ...icp, custom: customFields };
     for (const k of FIELD_ORDER) confirmedIcp[k] = { ...confirmedIcp[k], confirmed: true };
     try {
       const res = await fetch(`/api/run/${scan.runId}/start`, {
@@ -286,6 +345,7 @@ export default function ScanFlow() {
           {FIELD_ORDER.map((key, i) => {
             const f = icp[key];
             const weak = !f.confirmed && (f.confidence < CONFIDENCE_THRESHOLD || !f.value);
+            const isMultiField = MULTI_FIELDS.has(key);
             return (
               <div key={key} className="animate-stagger rounded-board border border-line bg-page p-4" style={{ ["--i" as string]: i }}>
                 <div className="flex items-center justify-between">
@@ -302,7 +362,24 @@ export default function ScanFlow() {
                 </div>
 
                 {f.value && !weak ? (
-                  <p className="mt-1.5 text-[15px] font-medium text-ink">{f.value}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {isMultiField ? (
+                      f.value.split(",").map((s) => s.trim()).filter(Boolean).map((v) => (
+                        <span key={v} className="group inline-flex items-center gap-1 rounded-chip border border-blue bg-blue-soft px-2.5 py-1 text-xs font-semibold text-blue-deep">
+                          {v}
+                          <button
+                            onClick={() => removeCapsule(key, true, v)}
+                            aria-label={`Remove ${v}`}
+                            className="text-blue/50 transition group-hover:text-blue"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[15px] font-medium text-ink">{f.value}</span>
+                    )}
+                  </div>
                 ) : (
                   <p className="mt-1.5 text-sm text-ink-60">We&apos;re not sure. Pick the closest:</p>
                 )}
@@ -328,6 +405,38 @@ export default function ScanFlow() {
                       </button>
                     );
                   })}
+                  {/* "Add your own" capsule + inline input. */}
+                  {customOpen[key] ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={customDraft[key] ?? ""}
+                        onChange={(e) => setDraft(key, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitCustom(key, isMultiField);
+                          }
+                          if (e.key === "Escape") setCustomOpen((o) => ({ ...o, [key]: false }));
+                        }}
+                        placeholder={FIELD_LABEL[key].toLowerCase()}
+                        className="w-36 rounded-chip border border-blue bg-surface px-2.5 py-1 text-xs text-ink outline-none placeholder:text-ink-40"
+                      />
+                      <button
+                        onClick={() => commitCustom(key, isMultiField)}
+                        className="rounded-chip bg-blue px-2 py-0.5 text-[11px] font-semibold text-white"
+                      >
+                        Add
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setCustomOpen((o) => ({ ...o, [key]: true }))}
+                      className="rounded-chip border border-dashed border-line-strong px-2.5 py-1 text-xs font-medium text-ink-40 transition hover:border-blue hover:text-blue"
+                    >
+                      + Add
+                    </button>
+                  )}
                 </div>
                 {f.sources.length > 0 && (
                   <p className="mt-2 text-[11px] text-ink-40">from {f.sources.join(", ")}</p>
@@ -335,6 +444,66 @@ export default function ScanFlow() {
               </div>
             );
           })}
+
+          {/* User-added fields render like first-class cards. */}
+          {customFields.map((cf, i) => (
+            <div key={cf.label} className="animate-stagger rounded-board border border-line bg-page p-4" style={{ ["--i" as string]: FIELD_ORDER.length + i }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wide text-ink-40">{cf.label}</span>
+                <button
+                  onClick={() => removeCustomField(cf.label)}
+                  aria-label={`Remove ${cf.label}`}
+                  className="text-xs text-ink-40 transition hover:text-crit"
+                >
+                  ✕ remove
+                </button>
+              </div>
+              <input
+                value={cf.value}
+                onChange={(e) =>
+                  setCustomFields((list) => list.map((x) => (x.label === cf.label ? { ...x, value: e.target.value } : x)))
+                }
+                placeholder="Type here…"
+                className="mt-1.5 w-full rounded-board border border-line bg-surface px-3 py-1.5 text-[15px] text-ink outline-none placeholder:text-ink-40 focus:border-blue"
+              />
+            </div>
+          ))}
+
+          {/* Add a brand-new field card. */}
+          {addFieldOpen ? (
+            <div className="rounded-board border border-dashed border-line-strong bg-page p-4">
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-40">New field</span>
+              <div className="mt-2 flex gap-2">
+                <input
+                  autoFocus
+                  value={addFieldLabel}
+                  onChange={(e) => setAddFieldLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && addFieldLabel.trim()) {
+                      e.preventDefault();
+                      addCustomField();
+                    }
+                  }}
+                  placeholder="Label, e.g. Industries avoided"
+                  className="min-w-0 flex-1 rounded-board border border-line-strong bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-40 focus:border-blue"
+                />
+                <button
+                  onClick={addCustomField}
+                  disabled={!addFieldLabel.trim()}
+                  className="rounded-board bg-blue px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                >
+                  Add field
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAddFieldOpen(true)}
+              className="w-full rounded-board border border-dashed border-line-strong px-3 py-3 text-xs font-semibold text-ink-40 transition hover:border-blue hover:text-blue"
+            >
+              ＋ Add your own field
+            </button>
+          )}
         </div>
 
         {error && <p className="mt-3 text-sm text-crit">{error}</p>}

@@ -28,6 +28,11 @@ export const IcpSchema = z.object({
   dealSizeTier: ConfidentField,
   proofPoints: z.array(z.string()).default([]),
   recencySignals: z.array(z.string()).default([]),
+  /** User-added context cards from the confirm screen ("＋ Add your own
+   *  field"): arbitrary label/value pairs the owner considers qualifying.
+   *  Pass-through for personalization and outreach copy; the pipeline never
+   *  requires them. */
+  custom: z.array(z.object({ label: z.string(), value: z.string() })).default([]),
   /** metro slug used as half the cache key. Plan §9.2 */
   metro: z.string().default("unknown"),
   radiusMiles: z.number().default(25),

@@ -31,7 +31,6 @@ const SERVICE_OPTIONS = [
  * "regional" selections by widening the radius around the detected metro —
  * the geography clause is display + intent, while the geo math stays here.
  */
-const GEO_OPTIONS = ["My metro area", "Wider state", "Multi-state region", "U.S. national"];
 
 function field(
   value: string,
@@ -117,9 +116,6 @@ export async function inferIcp(args: {
   const verticalConfidence = args.overrides?.vertical ? 1 : verticals.length ? 0.8 : 0.2;
 
   /* ── geography ───────────────────────────────────────────── */
-  // Detection yields the REAL place name (city / service area from the
-  // site's own copy); the abstract "National" default only applies when the
-  // site is reachable but gives no geography at all.
   const geoValue =
     args.overrides?.city ??
     profile?.serviceArea ??
@@ -137,11 +133,33 @@ export async function inferIcp(args: {
     .replace(/\s*(county|metro|area)\s*$/i, "")
     .trim();
 
+  /**
+   * Geography chips are REAL names, not abstract scopes — the confirm card
+   * reads like a human wrote it. The detected metro's proper name leads; the
+   * rest are scope multipliers phrased concretely around the detected place
+   * (e.g. "San Diego County" → "All of California"). Selection stays a plain
+   * string in Icp.geography.value; sourcing widens the radius for the wider
+   * scopes — the geo math lives in metro/radius, this clause is meaning.
+   */
+  const stateForMetro = (m: string): string => {
+    // Mock coverage is CA/TX/CO; live geo would come from the GBP address.
+    if (/austin/i.test(m)) return "Texas";
+    if (/denver/i.test(m)) return "Colorado";
+    return "California";
+  };
+  const regionScopeOptions = [
+    metro,
+    `All of ${stateForMetro(metro)}`,
+    `${stateForMetro(metro)} + neighboring states`,
+    "Anywhere in the U.S.",
+  ];
+
   const strong = [servicesConfidence, verticalConfidence, geoConfidence]
     .filter((c) => c >= CONFIDENCE_THRESHOLD).length;
   const fellBackToQuestions = strong === 0;
 
   const icp: Icp = {
+    custom: [],
     servicesOffered: field(
       services.join(", ") || "",
       servicesConfidence,
@@ -158,7 +176,7 @@ export async function inferIcp(args: {
       geoValue,
       geoConfidence,
       ["GBP service area", "Case-study locations"],
-      GEO_OPTIONS
+      regionScopeOptions
     ),
     dealSizeTier: field("", dealConfidence, ["Directory budget band", "Pricing page"], DEAL_OPTIONS),
     proofPoints: [],
