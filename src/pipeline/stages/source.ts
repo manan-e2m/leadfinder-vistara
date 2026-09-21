@@ -84,6 +84,7 @@ export async function sourceCandidates(args: {
           name: c.name,
           website: c.domain,
           phone: c.phone,
+          email: c.email,
           addressLine: null,
           city: c.city,
           region: c.region,

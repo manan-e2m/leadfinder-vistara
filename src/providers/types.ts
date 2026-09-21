@@ -14,6 +14,9 @@ export interface PlaceRecord {
   name: string;
   website: string | null;
   phone: string | null;
+  /** supplied only by sources that carry one (B2B database); feeds the
+   *  verification email checks and the reachability score. Plan §5.3 */
+  email?: string | null;
   addressLine: string | null;
   city: string | null;
   region: string | null;

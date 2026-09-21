@@ -33,6 +33,8 @@ const REASON_COPY: Record<string, string> = {
   permanently_closed: "Google Business Profile status: permanently closed",
   phone_format_invalid: "Listed phone fails format validation",
   phone_carrier_lookup_failed: "Listed phone fails carrier lookup; number disconnected",
+  phone_lookup_unavailable: "Phone verification service did not respond — treat the number as unverified",
+  phone_format_only: "Phone is format-valid only; no carrier lookup was available",
   email_syntax_invalid: "Listed email fails syntax validation",
   email_mx_lookup_failed: "Listed email domain has no MX record",
   site_parked_or_redirected: "Domain redirects to a parked page",
@@ -82,8 +84,9 @@ export async function verifyCandidates(args: {
 
     let result;
     try {
-      result = await verify.check({ phone: p.phone, email: null, website: p.website });
+      result = await verify.check({ phone: p.phone, email: p.email ?? null, website: p.website });
       await args.budget.charge("verify.phone", 1, "verify");
+      if (p.email) await args.budget.charge("verify.email", 1, "verify");
     } catch (e) {
       await logFailure({ stage: "verify", reason: (e as Error).message, url: p.website, runId: args.runId });
       heldBack.push({ name: p.name, reason: "Verification service did not respond" });

@@ -273,7 +273,7 @@ async function persistLead(args: {
           name: p.name,
           website: p.website,
           phone: p.phone,
-          email: null,
+          email: p.email ?? null,
           addressLine: p.addressLine,
           city: p.city,
           region: p.region,
