@@ -11,7 +11,7 @@ import { runAudits } from "./stages/audit";
 import { verifyCandidates } from "./stages/verify";
 import { scoreAll, capShortlist, type ScoredLead } from "./stages/score";
 import { personalize } from "./stages/personalize";
-import { randomBytes } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 /**
  * The orchestrator.
@@ -329,7 +329,7 @@ async function persistLead(args: {
       await db.auditDoc.create({
         data: {
           leadId: lead.id,
-          token: randomBytes(12).toString("base64url"),
+          token: randomUUID().replace(/-/g, "").slice(0, 16),
           brandJson: packJson(brand),
           findingsJson: packJson(personal.auditFindings),
           planSummary: personal.auditPlan,

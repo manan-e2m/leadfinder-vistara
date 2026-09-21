@@ -7,16 +7,15 @@
  * re-enqueued (see src/lib/runRecovery.ts).
  *
  * NOTE: this file is compiled for BOTH runtimes (nodejs + edge). The edge
- * graph cannot contain node: builtins, so the sweep loader below keeps the
- * import out of webpack's static analysis via eval. The sweep itself lives
- * in src/lib/startupSweep.ts.
+ * graph cannot contain node: builtins, so next.config.ts aliases
+ * "@/lib/startupSweep" to "@/lib/startupSweep.edgeStub" (a no-op) when
+ * NEXT_RUNTIME is edge — the real sweep module only ever loads in nodejs.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const mod = await eval("import('@/lib/startupSweep')");
-    await (mod as { runStartupSweep: () => Promise<void> }).runStartupSweep();
+    const { runStartupSweep } = await import("@/lib/startupSweep");
+    await runStartupSweep();
   } catch (e) {
     // Never block server startup on recovery — e.g. DB not migrated yet.
     console.warn("[recovery] startup sweep skipped:", (e as Error).message);
