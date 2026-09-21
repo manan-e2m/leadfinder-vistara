@@ -5,30 +5,83 @@ import clsx from "clsx";
 import type { RunView, LeadView } from "@/lib/results";
 import { Chip, ScoreBreakdown, ScorePill, SEVERITY, FAMILY_LABEL } from "./ui";
 
+/**
+ * Per-lead action state. Every mutating button (CRM push, scope email) keeps
+ * its own idle/pushing/done/error state keyed by lead id, with a
+ * double-click guard — a second click while a request is in flight is a
+ * no-op, and failure renders a message the agency owner can act on.
+ */
+type LeadActionState = {
+  state: "idle" | "pushing" | "done" | "error";
+  msg?: string;
+};
+
+const CRM_LABEL: Record<string, string> = { ghl: "GoHighLevel", hubspot: "HubSpot" };
+
 export default function LeadList({ view }: { view: RunView }) {
   const [expanded, setExpanded] = useState<string | null>(view.leads[0]?.id ?? null);
-  const [crm, setCrm] = useState<{ state: "idle" | "pushing" | "done"; msg?: string }>({ state: "idle" });
+  const [crm, setCrm] = useState<LeadActionState>({ state: "idle" });
+  /** per-lead push state, keyed `leadId:provider` */
+  const [perLead, setPerLead] = useState<Record<string, LeadActionState>>({});
+  const [shared, setShared] = useState<string | null>(null);
 
-  async function pushCrm(provider: string) {
+  function guard(state: LeadActionState): boolean {
+    // double-click guard: ignore presses while a request is in flight
+    return state.state !== "pushing";
+  }
+
+  async function pushAll(provider: string) {
+    if (!guard(crm)) return;
     setCrm({ state: "pushing" });
+    await runPush(provider, null, (s) => setCrm(s));
+  }
+
+  async function pushOne(leadId: string, provider: string) {
+    const key = `${leadId}:${provider}`;
+    const cur = perLead[key] ?? { state: "idle" as const };
+    if (!guard(cur)) return;
+    setPerLead((p) => ({ ...p, [key]: { state: "pushing" } }));
+    await runPush(provider, leadId, (s) => setPerLead((p) => ({ ...p, [key]: s })));
+  }
+
+  async function runPush(
+    provider: string,
+    leadId: string | null,
+    set: (s: LeadActionState) => void
+  ) {
     try {
       const res = await fetch(`/api/run/${view.runId}/crm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider }),
+        body: JSON.stringify(leadId ? { provider, leadId } : { provider }),
       });
       const data = await res.json();
       if (data.ok) {
-        setCrm({
+        set({
           state: "done",
-          msg: `Pushed ${data.count} to ${provider === "ghl" ? "GoHighLevel" : "HubSpot"}${data.live ? "" : " (mock)"}.`,
+          msg: `Pushed ${data.count} to ${CRM_LABEL[provider] ?? provider}${data.live ? "" : " (mock)"}.`,
+        });
+      } else if (data.error === "crm_not_connected") {
+        set({
+          state: "error",
+          msg: `Connect your ${CRM_LABEL[provider] ?? provider} CRM in settings first. The CSV export works without it.`,
         });
       } else {
-        setCrm({ state: "done", msg: `Push failed. Use the CSV instead. (${data.error ?? "error"})` });
+        set({
+          state: "error",
+          msg: `Push failed. Use the CSV export instead. (${data.error ?? "error"})`,
+        });
       }
     } catch {
-      setCrm({ state: "done", msg: "Push failed. Use the CSV instead." });
+      set({ state: "error", msg: "Network error — push didn't happen. Use the CSV export instead." });
     }
+  }
+
+  async function shareLink() {
+    const url = `${window.location.origin}/results/${view.runId}`;
+    const copied = await copyText(url);
+    setShared(copied ? "Link copied — paste it anywhere" : url);
+    if (copied) setTimeout(() => setShared(null), 2000);
   }
 
   return (
@@ -38,7 +91,11 @@ export default function LeadList({ view }: { view: RunView }) {
           <span className="font-semibold text-ink">{view.leads.length} prospects</span> ready to contact
         </p>
         <div className="flex items-center gap-2">
-          {crm.msg && <span className="text-xs text-ink-60">{crm.msg}</span>}
+          {crm.msg && (
+            <span className={clsx("max-w-xs text-xs", crm.state === "error" ? "text-crit" : "text-ink-60")}>
+              {crm.msg}
+            </span>
+          )}
           <a
             href={`/api/run/${view.runId}/export`}
             className="press rounded-board border border-line-strong bg-surface px-3 py-2 text-xs font-semibold text-ink-80 hover:border-blue"
@@ -46,14 +103,20 @@ export default function LeadList({ view }: { view: RunView }) {
             Export CSV
           </a>
           <button
-            onClick={() => pushCrm("ghl")}
+            onClick={shareLink}
+            className="press rounded-board border border-line-strong bg-surface px-3 py-2 text-xs font-semibold text-ink-80 hover:border-blue"
+          >
+            {shared ?? "Share link"}
+          </button>
+          <button
+            onClick={() => pushAll("ghl")}
             disabled={crm.state === "pushing"}
             className="press rounded-board bg-blue px-3 py-2 text-xs font-semibold text-white hover:bg-blue-deep disabled:opacity-50"
           >
-            {crm.state === "pushing" ? "Pushing…" : "Push to GoHighLevel"}
+            {crm.state === "pushing" ? "Pushing…" : "Push all to GoHighLevel"}
           </button>
           <button
-            onClick={() => pushCrm("hubspot")}
+            onClick={() => pushAll("hubspot")}
             disabled={crm.state === "pushing"}
             className="press rounded-board border border-line-strong bg-surface px-3 py-2 text-xs font-semibold text-ink-80 hover:border-blue disabled:opacity-50"
           >
@@ -69,7 +132,10 @@ export default function LeadList({ view }: { view: RunView }) {
             lead={l}
             index={i}
             open={expanded === l.id}
-            onToggle={() => setExpanded(expanded === l.id ? null : l.id)}
+            ghl={perLead[`${l.id}:ghl`] ?? { state: "idle" }}
+            hubspot={perLead[`${l.id}:hubspot`] ?? { state: "idle" }}
+            doToggle={() => setExpanded(expanded === l.id ? null : l.id)}
+            onPush={pushOne}
           />
         ))}
       </ul>
@@ -77,7 +143,81 @@ export default function LeadList({ view }: { view: RunView }) {
   );
 }
 
-function LeadCard({ lead, index, open, onToggle }: { lead: LeadView; index: number; open: boolean; onToggle: () => void }) {
+const ACTION_MSG: Record<string, string> = {
+  pushing: "Pushing…",
+  done: "Pushed ✓",
+};
+
+function CrmOneButton({
+  provider,
+  state,
+  onPush,
+  leadId,
+  solid,
+}: {
+  provider: string;
+  state: LeadActionState;
+  onPush: (leadId: string, provider: string) => void;
+  leadId: string;
+  solid?: boolean;
+}) {
+  const label = CRM_LABEL[provider] ?? provider;
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onPush(leadId, provider);
+        }}
+        disabled={state.state === "pushing"}
+        className={clsx(
+          "press rounded-board px-3 py-2 text-xs font-semibold disabled:opacity-50",
+          solid
+            ? "bg-agency text-white hover:opacity-90"
+            : "border border-line-strong bg-surface text-ink-80 hover:border-blue"
+        )}
+      >
+        {state.state === "pushing" ? "Pushing…" : state.state === "done" ? "In CRM ✓" : label}
+      </button>
+      {state.state === "error" && state.msg && <span className="text-[11px] text-crit">{state.msg}</span>}
+    </div>
+  );
+}
+
+function LeadCard({
+  lead,
+  index,
+  open,
+  doToggle,
+  ghl,
+  hubspot,
+  onPush,
+}: {
+  lead: LeadView;
+  index: number;
+  open: boolean;
+  doToggle: () => void;
+  ghl: LeadActionState;
+  hubspot: LeadActionState;
+  onPush: (leadId: string, provider: string) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  async function copyRow() {
+    const line = [
+      lead.business.name,
+      lead.business.phone ?? "",
+      open ? lead.business.website ?? "" : "",
+      lead.headlineGap,
+      lead.openers.phone?.body ?? "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const ok = await copyText(line);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    }
+  }
   return (
     <li
       className={clsx(
@@ -86,28 +226,59 @@ function LeadCard({ lead, index, open, onToggle }: { lead: LeadView; index: numb
       )}
       style={{ ["--i" as string]: Math.min(index, 12) }}
     >
-      <button onClick={onToggle} className="flex w-full items-center gap-4 px-4 py-3.5 text-left">
-        <span className="w-6 shrink-0 text-center font-mono text-sm text-ink-40">{lead.rank}</span>
-        <ScorePill score={lead.score} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-[15px] font-bold text-ink">{lead.business.name}</span>
-            <Chip tone="blue">{lead.tagLabel}</Chip>
-            {lead.degraded && <Chip tone="warn">template opener</Chip>}
+      <div className="flex items-stretch">
+        <button onClick={doToggle} className="flex min-w-0 flex-1 items-center gap-4 px-4 py-3.5 text-left">
+          <span className="w-6 shrink-0 text-center font-mono text-sm text-ink-40">{lead.rank}</span>
+          <ScorePill score={lead.score} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-[15px] font-bold text-ink">{lead.business.name}</span>
+              <Chip tone="blue">{lead.tagLabel}</Chip>
+            </div>
+            <p className="mt-0.5 truncate text-xs text-ink-60">
+              {[lead.business.city, lead.business.region].filter(Boolean).join(", ")}
+              {lead.business.reviewCount != null && ` · ${lead.business.reviewCount} reviews`}
+              {lead.business.rating != null && ` · ${lead.business.rating}★`}
+            </p>
+            <p className="mt-1 truncate text-xs text-ink-80">{lead.headlineGap}</p>
           </div>
-          <p className="mt-0.5 truncate text-xs text-ink-60">
-            {[lead.business.city, lead.business.region].filter(Boolean).join(", ")}
-            {lead.business.reviewCount != null && ` · ${lead.business.reviewCount} reviews`}
-            {lead.business.rating != null && ` · ${lead.business.rating}★`}
-          </p>
-          <p className="mt-1 truncate text-xs text-ink-80">{lead.headlineGap}</p>
-        </div>
-        <span className={clsx("shrink-0 text-ink-40 transition", open && "rotate-180")}>▾</span>
-      </button>
+          <span className={clsx("shrink-0 text-ink-40 transition", open && "rotate-180")}>▾</span>
+        </button>
+        {/* Copy stays outside the toggle so one click never expands the card */}
+        <button
+          onClick={copyRow}
+          className="shrink-0 border-l border-line px-3 text-[11px] font-semibold text-ink-60 hover:bg-surface-2 hover:text-blue"
+          aria-label={`Copy ${lead.business.name}'s contact details`}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
 
       {open && (
         <div className="animate-fade border-t border-line bg-page px-4 py-4">
-          <div className="rounded-board border border-line bg-surface p-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {lead.business.phone && (
+              <span className="rounded-board border border-line bg-surface px-3 py-1.5 font-mono text-sm text-ink">
+                {lead.business.phone}
+              </span>
+            )}
+            {lead.business.website && (
+              <a
+                href={`https://${lead.business.website}`}
+                target="_blank"
+                rel="noreferrer"
+                className="truncate font-mono text-xs text-blue hover:text-blue-deep"
+              >
+                {lead.business.website} ↗
+              </a>
+            )}
+            <div className="flex items-center gap-2">
+              <CrmOneButton provider="ghl" leadId={lead.id} state={ghl} onPush={onPush} />
+              <CrmOneButton provider="hubspot" leadId={lead.id} state={hubspot} onPush={onPush} />
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-board border border-line bg-surface p-3">
             <ScoreBreakdown breakdown={lead.breakdown} />
           </div>
 
@@ -154,11 +325,18 @@ function LeadCard({ lead, index, open, onToggle }: { lead: LeadView; index: numb
 function Openers({ lead }: { lead: LeadView }) {
   const [copied, setCopied] = useState<string | null>(null);
   function copy(text: string, which: string) {
-    navigator.clipboard?.writeText(text).then(() => {
+    copyText(text).then((ok) => {
+      if (!ok) return;
       setCopied(which);
       setTimeout(() => setCopied(null), 1400);
     });
   }
+  const templateNote = (origin: string) =>
+    origin === "template" ? (
+      <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-warn">
+        template opener — re-run personalize for custom
+      </p>
+    ) : null;
   return (
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
       {lead.openers.email && (
@@ -171,6 +349,7 @@ function Openers({ lead }: { lead: LeadView }) {
           </div>
           <p className="mt-1.5 text-xs font-semibold text-ink">{lead.openers.email.subject}</p>
           <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-ink-80">{lead.openers.email.body}</p>
+          {templateNote(lead.openers.email.origin)}
         </div>
       )}
       {lead.openers.phone && (
@@ -182,6 +361,7 @@ function Openers({ lead }: { lead: LeadView }) {
             </button>
           </div>
           <p className="mt-1.5 whitespace-pre-line text-xs leading-relaxed text-ink-80">{lead.openers.phone.body}</p>
+          {templateNote(lead.openers.phone.origin)}
         </div>
       )}
     </div>
@@ -191,17 +371,21 @@ function Openers({ lead }: { lead: LeadView }) {
 function ScopeButton({ leadId, auditToken }: { leadId: string; auditToken: string | null }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
 
   async function submit() {
-    if (!email.trim()) return;
+    if (!email.trim() || state === "sending") return; // double-click guard
     setState("sending");
-    await fetch("/api/scope", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leadId, contactEmail: email }),
-    }).catch(() => {});
-    setState("done");
+    try {
+      const res = await fetch("/api/scope", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId, contactEmail: email }),
+      });
+      setState(res.ok ? "done" : "error");
+    } catch {
+      setState("error");
+    }
   }
 
   return (
@@ -241,6 +425,35 @@ function ScopeButton({ leadId, auditToken }: { leadId: string; auditToken: strin
         </div>
       )}
       {state === "done" && <span className="text-xs text-ok">Sent to the E2M partner team ✓</span>}
+      {state === "error" && (
+        <span className="text-xs text-crit">
+          Couldn&apos;t send. Check the address and try again.
+        </span>
+      )}
     </div>
   );
+}
+
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through to the textarea fallback */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
 }
