@@ -1,4 +1,5 @@
 import { env, useLive } from "@/lib/env";
+import { isBlockedHostSync } from "@/lib/urlGuard";
 import type { VerifyProvider, VerifyResult } from "./types";
 import { rng, chance, pick } from "./fixtures";
 
@@ -68,6 +69,13 @@ const live: VerifyProvider = {
       email: { valid: false, isRole: false, mxOk: false },
       site: { resolves: true },
     };
+
+    // SSRF guard: candidate-supplied websites must never be fetched if they
+    // point at localhost / link-local / RFC1918 (verification does a HEAD).
+    if (website && isBlockedHostSync(website)) {
+      out.site = { resolves: false, reason: "unreachable" };
+      return out;
+    }
 
     if (phone && env.keys.phoneVerify) {
       try {
