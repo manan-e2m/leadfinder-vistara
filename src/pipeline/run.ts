@@ -99,7 +99,7 @@ export async function executeRun(args: {
       "source",
       () => sourceCandidates({ icp, route, budget }),
       async () => ({
-        candidates: [], widenedNote: "Sourcing degraded — showing cached results only",
+        candidates: [], widenedNote: "Sourcing degraded. Showing cached results only",
         fromCache: true, effectiveRadius: icp.radiusMiles, sourcesUsed: [],
       })
     );

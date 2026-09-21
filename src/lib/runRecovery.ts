@@ -56,7 +56,7 @@ export function isStaleRun(run: {
  * still in a non-terminal status.
  */
 export async function failStaleRun(runId: string): Promise<void> {
-  const reason = "Run interrupted by a server restart — please start a new run";
+  const reason = "Run interrupted by a server restart. Please start a new run.";
   await db.run.updateMany({
     where: { id: runId, status: { in: ["queued", "running", "loading"] } },
     data: { status: "failed", finishedAt: new Date() },

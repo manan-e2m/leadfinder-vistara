@@ -94,7 +94,7 @@ export async function sourceCandidates(args: {
           categories: [c.industry ?? vertical],
           locationCount: 1,
           ownerRespondsToReviews: false,
-          attribution: "B2B contact database — licensed for this use case",
+          attribution: "B2B contact database, licensed for this use case",
         }))
       );
     } catch (e) {
