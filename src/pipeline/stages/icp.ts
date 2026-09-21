@@ -50,7 +50,7 @@ export async function inferIcp(args: {
   budget: RunBudget;
   overrides?: { city?: string | null; radiusMiles?: number | null; vertical?: string | null };
 }): Promise<IcpResult> {
-  const cached = await cacheGet<IcpResult>(icpKey(args.domain));
+  const cached = await cacheGet<IcpResult>(icpKey(args.domain, args.agencyName));
   if (cached) return cached;
 
   // Sources run in PARALLEL. One slow or blocked source must not hold up
@@ -186,7 +186,7 @@ export async function inferIcp(args: {
   };
 
   const result: IcpResult = { icp, brand, sourcesUsed, fellBackToQuestions, siteFailure };
-  await cacheSet(icpKey(args.domain), "icp", result);
+  await cacheSet(icpKey(args.domain, args.agencyName), "icp", result);
   return result;
 }
 

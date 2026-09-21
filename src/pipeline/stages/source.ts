@@ -54,7 +54,14 @@ export async function sourceCandidates(args: {
   let widenedNote: string | null = null;
   let pool: PlaceRecord[] = [];
 
-  const wantsLocal = route.routes.includes("local_service") || route.routes.includes("budget_qualified");
+  const wantsLocal =
+    route.routes.includes("local_service") ||
+    route.routes.includes("budget_qualified") ||
+    // Pure-ecommerce routes had NO sourcing path at all: wantsLocal and
+    // wantsB2b were both false, so pool stayed empty and every ecom run
+    // degraded to zero candidates. Places' text search returns retail /
+    // store verticals fine, so ecom sources through the same path.
+    route.routes.includes("ecommerce");
   const wantsB2b = route.routes.includes("regional_b2b");
   const wantsEcom = route.routes.includes("ecommerce");
 

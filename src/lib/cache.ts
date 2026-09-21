@@ -22,8 +22,13 @@ export function poolKey(metro: string, vertical: string) {
 export function auditKey(domain: string, family: string) {
   return `audit:${slug(domain)}:${family}`;
 }
-export function icpKey(domain: string) {
-  return `icp:${slug(domain)}`;
+export function icpKey(domain: string, agencyName?: string) {
+  // The cached IcpResult embeds the brand (tone/name/colours) which is
+  // derived from the agency NAME, not just the domain. Two teammates of
+  // the same agency typing different names ("Acme" vs "Acme Digital")
+  // previously shared one cache entry and the second got the first's
+  // brand in their confirm card and every generated opener.
+  return `icp:${slug(domain)}${agencyName ? `:${slug(agencyName)}` : ""}`;
 }
 
 function slug(s: string) {
