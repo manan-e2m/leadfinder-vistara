@@ -129,7 +129,7 @@ async function auditOne(args: {
   const ranGbp = Boolean(wantGbp && canSpend);
 
   const [tech, speed, ads, profile] = await Promise.all([
-    ranTech ? techdetect.profile(domain).catch(() => null) : Promise.resolve(null),
+    ranTech && domain ? techdetect.profile(domain).catch(() => null) : Promise.resolve(null),
     ranSpeed && domain ? pagespeed.run(domain).catch(() => null) : Promise.resolve(null),
     ranAds ? adlibrary.lookup({ businessName: place.name, domain, metro: icp.metro }).catch(() => null) : Promise.resolve(null),
     ranGbp ? gbp.lookup({ businessName: place.name, domain }).catch(() => null) : Promise.resolve(null),
