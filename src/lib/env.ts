@@ -12,6 +12,13 @@ export const env = {
   appUrl: str("APP_URL", "http://localhost:3100"),
   databaseUrl: str("DATABASE_URL", "file:./dev.db"),
 
+  /**
+   * Optional shared secret for the /ops dashboard. When set, /api/providers
+   * requires it (Authorization: Bearer <token> or ?token=<token>) and /ops
+   * shows a token gate. When unset (demo default), ops is open as before.
+   */
+  opsToken: str("OPS_TOKEN"),
+
   /** auto = use a live adapter wherever its key exists, mock otherwise. */
   providerMode: str("PROVIDER_MODE", "auto") as ProviderMode,
 
