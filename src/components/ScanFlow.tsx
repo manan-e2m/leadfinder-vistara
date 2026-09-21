@@ -71,6 +71,29 @@ export default function ScanFlow() {
     });
   }
 
+  /** "Who you target" takes multiple verticals — comma-joined into .value,
+   * which the route matcher and sourcing-widening both already expect
+   * (route regexes test substrings; Place search splits on [,&]). */
+  function toggleVertical(opt: string) {
+    if (!icp) return;
+    const f = icp.targetVerticals;
+    const current = f.value.split(",").map((s) => s.trim()).filter(Boolean);
+    const next = current.includes(opt)
+      ? current.filter((v) => v !== opt)
+      : [...current, opt];
+    const value = next.join(", ");
+    setIcp({
+      ...icp,
+      targetVerticals: {
+        ...f,
+        value,
+        confirmed: next.length > 0,
+        // A deliberate multi-pick reads as more signal, not less.
+        confidence: next.length > 0 ? Math.max(f.confidence, 0.9) : f.confidence,
+      },
+    });
+  }
+
   async function confirm() {
     if (!scan || !icp) return;
     setLoading(true);
@@ -189,20 +212,26 @@ export default function ScanFlow() {
                 )}
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  {f.options.map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => setField(key, opt)}
-                      className={clsx(
-                        "rounded-chip border px-2.5 py-1 text-xs font-medium transition",
-                        f.value === opt
-                          ? "border-blue bg-blue-soft text-blue-deep"
-                          : "border-line-strong bg-surface text-ink-60 hover:border-blue"
-                      )}
-                    >
-                      {opt}
-                    </button>
-                  ))}
+                  {f.options.map((opt) => {
+                    const isMulti = key === "targetVerticals";
+                    const selected = isMulti
+                      ? f.value.split(",").map((s) => s.trim()).includes(opt) && f.value !== ""
+                      : f.value === opt;
+                    return (
+                      <button
+                        key={opt}
+                        onClick={() => (isMulti ? toggleVertical(opt) : setField(key, opt))}
+                        className={clsx(
+                          "rounded-chip border px-2.5 py-1 text-xs font-medium transition",
+                          selected
+                            ? "border-blue bg-blue-soft text-blue-deep"
+                            : "border-line-strong bg-surface text-ink-60 hover:border-blue"
+                        )}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
                 {f.sources.length > 0 && (
                   <p className="mt-2 text-[11px] text-ink-40">from {f.sources.join(", ")}</p>
