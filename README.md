@@ -166,17 +166,8 @@ Data comes from `GET /api/providers`, polled every 3s.
   absorb. Set `OPS_TOKEN` whenever the /ops URL is reachable by third parties.
 - Before the event: `npm run precompute` warms runs for registered attendees
   and seeds caches so walk-in loads are fast.
-- **TODO — Dockerfile.** None exists yet. When needed, a reasonable sketch:
-
-    ```dockerfile
-    FROM node:22-slim
-    WORKDIR /app
-    COPY package*.json ./
-    RUN npm ci
-    COPY prisma ./prisma
-    RUN npx prisma generate
-    COPY . .
-    RUN npm run build        # prisma generate && next build
-    # or better: multi-stage with `output: "standalone"` in next.config.ts
-    CMD ["npm", "start"]
-    ```
+- **Docker.** A multi-stage `Dockerfile` (node:20-alpine, non-root user,
+  entrypoint converging the schema at boot) and a `docker-compose.yml` with a
+  persistent volume for the SQLite database are included —
+  `docker compose up --build` gives a full local stack. For a hosted
+  deployment switch the datasource to Postgres:
