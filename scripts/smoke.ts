@@ -28,13 +28,13 @@ async function main() {
 
   /* 1. DB reachable — push schema first if the tables are missing. */
   try {
-    await db.$queryRaw`SELECT 1 FROM Run LIMIT 1`;
+    await db.$queryRaw`SELECT 1 FROM "Run" LIMIT 1`;
     check("database reachable", true);
   } catch {
     console.log("  · tables missing — running prisma db push…");
     const { execSync } = await import("node:child_process");
     execSync("npx prisma db push --skip-generate", { stdio: "inherit" });
-    await db.$queryRaw`SELECT 1 FROM Run LIMIT 1`;
+    await db.$queryRaw`SELECT 1 FROM "Run" LIMIT 1`;
     check("database reachable", true, "schema pushed by smoke script");
   }
 
