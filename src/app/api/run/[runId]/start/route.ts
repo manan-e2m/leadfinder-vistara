@@ -29,9 +29,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ runId: string 
   }
   const icp = icpParsed.data;
 
-  const brand = BrandSchema.parse(
+  const brandParsed = BrandSchema.safeParse(
     readJson(run.workspace.brandJson, { agencyName: run.workspace.agencyName ?? "" })
   );
+  if (!brandParsed.success) {
+    return NextResponse.json({ error: "invalid_brand", detail: brandParsed.error.flatten() }, { status: 400 });
+  }
+  const brand = brandParsed.data;
 
   // Persist the confirmed ICP so a reload shows what was actually run.
   await db.workspace.update({

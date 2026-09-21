@@ -177,5 +177,3 @@ const live: TechDetectProvider = {
 export const techdetect: TechDetectProvider =
   env.providerMode === "mock" ? mock : env.providerMode === "live" ? live : mock;
 
-export const techdetectLive = live;
-export const techdetectMock = mock;

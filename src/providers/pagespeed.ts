@@ -1,4 +1,5 @@
 import { env, useLive } from "@/lib/env";
+import { log } from "@/lib/logger";
 import type { PageSpeedProvider, PageSpeedResult } from "./types";
 import { rng, int, chance } from "./fixtures";
 
@@ -33,11 +34,20 @@ const live: PageSpeedProvider = {
     u.searchParams.set("category", "performance");
     if (env.keys.pagespeed) u.searchParams.set("key", env.keys.pagespeed);
 
-    const res = await fetch(u, { signal: AbortSignal.timeout(20_000) });
-    if (!res.ok) return null;
-    const d = (await res.json()) as any;
-    const lh = d.lighthouseResult;
-    if (!lh) return null;
+    const res = await fetch(u, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) {
+      log("warn", "pagespeed", `non-ok ${res.status}`, url);
+      return null;
+    }
+    const d = (await res.json().catch((e) => {
+      log("warn", "pagespeed", `body read failed: ${String(e)}`, url);
+      return null;
+    })) as any;
+    const lh = d?.lighthouseResult;
+    if (!lh) {
+      log("warn", "pagespeed", "no lighthouseResult in response", url);
+      return null;
+    }
     return {
       mobileScore: Math.round((lh.categories?.performance?.score ?? 0) * 100),
       lcpSeconds: Number(((lh.audits?.["largest-contentful-paint"]?.numericValue ?? 0) / 1000).toFixed(1)),

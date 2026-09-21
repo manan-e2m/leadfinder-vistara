@@ -1,6 +1,5 @@
 import { db } from "./db";
 import { packJson, readJson } from "./json";
-import { log } from "./logger";
 
 /**
  * Cache keyed on metro + vertical, at both the candidate-pool level and the
@@ -36,7 +35,6 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   if (!row) return null;
   if (row.expiresAt.getTime() < Date.now()) return null;
   await db.cachePool.update({ where: { key }, data: { hits: { increment: 1 } } }).catch(() => {});
-  log("info", "cache", `hit ${key} (${row.hits + 1})`);
   return readJson<T | null>(row.payload, null);
 }
 
