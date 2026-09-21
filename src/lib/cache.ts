@@ -52,11 +52,18 @@ export async function cacheSet(key: string, kind: keyof typeof TTL_DAYS, value: 
       create: { key, kind, payload, expiresAt },
       update: { payload, expiresAt },
     })
-    .catch(() => {});
+    .catch(() => {})
+    .then(() => db.cachePool.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {}));
 }
 
 export async function cacheStats() {
-  const rows = await db.cachePool.findMany({ select: { kind: true, hits: true } });
+  // Expired rows stay on disk until something overwrites them, so count
+  // only live entries — the ops board's "entries" figure was inflated by
+  // stale rows nobody can ever read again.
+  const rows = await db.cachePool.findMany({
+    where: { expiresAt: { gt: new Date() } },
+    select: { kind: true, hits: true },
+  });
   const byKind: Record<string, { entries: number; hits: number }> = {};
   for (const r of rows) {
     byKind[r.kind] ??= { entries: 0, hits: 0 };
