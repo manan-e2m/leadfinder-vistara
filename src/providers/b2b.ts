@@ -48,7 +48,10 @@ const live: B2bProvider = {
       },
       body: JSON.stringify({
         q_organization_keyword_tags: [industry],
-        organization_locations: [region],
+        organization_locations: region
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
         per_page: Math.min(limit, 100),
       }),
       signal: AbortSignal.timeout(20_000),

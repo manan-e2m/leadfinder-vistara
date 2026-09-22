@@ -16,8 +16,14 @@ const TTL_DAYS: Record<string, number> = {
   icp: 30,      // an agency's own ICP changes slowly
 };
 
-export function poolKey(metro: string, vertical: string) {
-  return `pool:${slug(metro)}:${slug(vertical)}`;
+export function poolKey(metro: string, vertical: string, geography?: string) {
+  const base = `pool:${slug(metro)}:${slug(vertical)}`;
+  const geoSlug = slug(geography || "");
+  const metroSlug = slug(metro);
+  // Same metro+vertical still share a pool. Extra markets (Canada, national,
+  // multi-select) get their own key so a 25-mile local cache is not reused.
+  if (geoSlug && geoSlug !== metroSlug) return `${base}:${geoSlug}`;
+  return base;
 }
 export function auditKey(domain: string, family: string) {
   return `audit:${slug(domain)}:${family}`;
@@ -28,7 +34,8 @@ export function icpKey(domain: string, agencyName?: string) {
   // the same agency typing different names ("Acme" vs "Acme Digital")
   // previously shared one cache entry and the second got the first's
   // brand in their confirm card and every generated opener.
-  return `icp:${slug(domain)}${agencyName ? `:${slug(agencyName)}` : ""}`;
+  // v6: header wordmark over "custom logo" product shots (Harbor & Oak).
+  return `icp:v6:${slug(domain)}${agencyName ? `:${slug(agencyName)}` : ""}`;
 }
 
 function slug(s: string) {

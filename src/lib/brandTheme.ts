@@ -9,8 +9,8 @@
  * Client side: any component can read the active brand via
  * <BrandProvider> + useBrand().
  *
- * Defaults reproduce the E2M palette from globals.css, so with no stored
- * brand the platform looks exactly as before.
+ * Defaults reproduce the platform palette from globals.css, so with no stored
+ * brand the chrome looks exactly as before.
  */
 import type { BrandAssets } from "@/lib/types";
 
@@ -22,6 +22,7 @@ export const DEFAULT_BRAND: BrandAssets = {
   agencyName: "",
   neutral: true,
   generated: false,
+  logoOnDark: false,
 };
 
 /** Compute a soft tint (10% alpha over white) from any hex colour. */
@@ -47,7 +48,7 @@ export function brandCssVars(brand: BrandAssets): Record<string, string> {
     "--brand-soft": softTint(brand.primary),
     "--agency": brand.primary,
     "--agency-soft": softTint(brand.primary),
-    "--logo-url": brand.logoUrl ? `url("${brand.logoUrl}")` : "none",
+    "--logo-url": brand.logoUrl ? `url(${JSON.stringify(brand.logoUrl)})` : "none",
   };
 }
 
@@ -56,4 +57,15 @@ export interface BrandTheme {
   brand: BrandAssets;
   /** letter to render in the generated avatar when detection failed */
   initial: string;
+}
+
+export function themeFromBrand(brand: BrandAssets, domain = ""): BrandTheme {
+  const initial = (brand.agencyName || domain || "L")
+    .split(".")[0]
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .find(Boolean)?.[0]
+    ?.toUpperCase() ?? "L";
+  return { brand, initial };
 }

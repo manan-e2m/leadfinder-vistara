@@ -2,7 +2,7 @@ import { env, useLive } from "@/lib/env";
 import type { BenchmarkProvider } from "./types";
 
 /**
- * E2M's delivery history is the one thing no competitor in that room can
+ * Delivery history is the one thing no competitor in that room can
  * reproduce. Nothing else in the pipeline is a moat — any competent team
  * could build it, and some attendees have. Plan §8
  *
@@ -20,7 +20,7 @@ const unavailable: BenchmarkProvider = {
 
 /** Percentile table derived from the anonymized corpus of delivered sites. */
 const live: BenchmarkProvider = {
-  name: "benchmark/e2m-corpus",
+  name: "benchmark/corpus",
   live: true,
   async compare({ metric, value }) {
     try {
@@ -38,7 +38,7 @@ const live: BenchmarkProvider = {
         : d.percentile <= 75 ? "top half"
         : "top quartile";
 
-      return `${band} of the ${(d.sample ?? 10_000).toLocaleString()}+ sites E2M has built or optimized${d.delta ? `. ${d.delta}` : "."}`;
+      return `${band} of the ${(d.sample ?? 10_000).toLocaleString()}+ sites in the delivery corpus${d.delta ? `. ${d.delta}` : "."}`;
     } catch {
       return null;
     }

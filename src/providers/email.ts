@@ -29,7 +29,7 @@ const live: EmailProvider = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "E2M LeadFinder <leadfinder@e2msolutions.com>",
+          from: `LeadFinder <noreply@${new URL(env.appUrl).hostname}>`,
           to: [to],
           subject,
           html,

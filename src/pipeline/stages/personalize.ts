@@ -9,8 +9,8 @@ import type { RunBudget } from "@/lib/cost";
  * calibrated to the agency's own site copy so the opener sounds like them.
  *
  * Plus a one-page white-labeled audit per lead carrying the agency's logo
- * and colours — E2M's business model in miniature: E2M does the work, the
- * agency's name goes on it. Plan §5.6
+ * and colours — the platform does the work, the agency's name goes on it.
+ * Plan §5.6
  *
  * The tool DRAFTS. It never sends. That line is what keeps the product clear
  * of TCPA and CAN-SPAM at the event, and it is not a limitation to be

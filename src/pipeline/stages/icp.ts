@@ -1,6 +1,7 @@
 import { techdetect, gbp, adlibrary, llm } from "@/providers";
 import { CONFIDENCE_THRESHOLD, type Icp, type BrandAssets } from "@/lib/types";
-import { extractBrandFromSite, generatedAvatarColor } from "@/lib/brand";
+import { extractBrandFromSite, generatedAvatarColor, resolveLogoUrl } from "@/lib/brand";
+import { DEFAULT_BRAND } from "@/lib/brandTheme";
 import { cacheGet, cacheSet, icpKey } from "@/lib/cache";
 import { logFailure } from "@/lib/logger";
 import type { RunBudget } from "@/lib/cost";
@@ -26,10 +27,10 @@ const SERVICE_OPTIONS = [
 /**
  * Geography options are REAL names, not abstract scopes — the confirm card
  * should read like a human wrote it. The detected metro's proper name leads;
- * the rest are scope multipliers phrased concretely. Selection stays a plain
- * string in Icp.geography.value, and the sourcing path treats "state" and
- * "regional" selections by widening the radius around the detected metro —
- * the geography clause is display + intent, while the geo math stays here.
+ * the rest are scope multipliers phrased concretely, plus extra markets
+ * (Canada) the agency can pick alongside the U.S. ones. Picks are
+ * comma-joined in Icp.geography.value; sourcing splits them, widens radius
+ * for the widest U.S. scope, and sends each market to B2B search.
  */
 
 function field(
@@ -137,9 +138,9 @@ export async function inferIcp(args: {
    * Geography chips are REAL names, not abstract scopes — the confirm card
    * reads like a human wrote it. The detected metro's proper name leads; the
    * rest are scope multipliers phrased concretely around the detected place
-   * (e.g. "San Diego County" → "All of California"). Selection stays a plain
-   * string in Icp.geography.value; sourcing widens the radius for the wider
-   * scopes — the geo math lives in metro/radius, this clause is meaning.
+   * (e.g. "San Diego County" → "All of California"), plus extra markets
+   * they can combine (U.S. + Canada). Picks are comma-joined; sourcing
+   * splits them and widens radius for the widest selected scope.
    */
   const stateForMetro = (m: string): string => {
     // Mock coverage is CA/TX/CO; live geo would come from the GBP address.
@@ -152,6 +153,7 @@ export async function inferIcp(args: {
     `All of ${stateForMetro(metro)}`,
     `${stateForMetro(metro)} + neighboring states`,
     "Anywhere in the U.S.",
+    "Canada",
   ];
 
   const strong = [servicesConfidence, verticalConfidence, geoConfidence]
@@ -199,20 +201,26 @@ export async function inferIcp(args: {
    * "Using generated brand" hint. App. C
    */
   const extracted = await extractBrandFromSite(args.domain).catch(() => null);
-  const detectedColor = tech?.brandPrimaryColor ?? extracted?.primary ?? null;
-  const logoUrl = tech?.logoUrl ?? extracted?.logoUrl ?? null;
+  const detectedColor = extracted?.primary ?? tech?.brandPrimaryColor ?? null;
+  const logoUrl =
+    extracted?.logoUrl ??
+    (tech?.logoUrl ? resolveLogoUrl(tech.logoUrl, args.domain) : null);
+  const siteUnavailable = Boolean(siteFailure) || !logoUrl;
   const detectionFailed = !tech?.reachable || (!detectedColor && !logoUrl);
-  const brand: BrandAssets = {
-    logoUrl,
-    primary: detectedColor ?? generatedAvatarColor(args.agencyName || args.domain),
-    secondary: "#08090C",
-    tone: "direct, plain-spoken, no jargon",
-    agencyName: args.agencyName,
-    // Extraction failed → neutral template carrying their name and domain.
-    // Still theirs, still sendable. App. C
-    neutral: detectionFailed,
-    generated: detectionFailed,
-  };
+  // No readable site or no usable mark → keep default chrome. Never invent a
+  // letter avatar or leave a blank tile. The confirm card says "Website not available".
+  const brand: BrandAssets = siteUnavailable
+    ? { ...DEFAULT_BRAND, agencyName: args.agencyName, neutral: true, generated: false }
+    : {
+        logoUrl,
+        primary: detectedColor ?? generatedAvatarColor(args.agencyName || args.domain),
+        secondary: "#08090C",
+        tone: "direct, plain-spoken, no jargon",
+        agencyName: args.agencyName,
+        neutral: detectionFailed,
+        generated: false,
+        logoOnDark: Boolean(extracted?.logoOnDark || (logoUrl && /white|inverted|on-?dark/i.test(logoUrl))),
+      };
 
   const result: IcpResult = { icp, brand, sourcesUsed, fellBackToQuestions, siteFailure };
   await cacheSet(icpKey(args.domain, args.agencyName), "icp", result);

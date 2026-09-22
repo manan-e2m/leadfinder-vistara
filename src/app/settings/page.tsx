@@ -24,9 +24,7 @@ export default function SettingsPage() {
     <main className="min-h-screen">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
-          <Link href="/">
-            <Wordmark />
-          </Link>
+          <Wordmark />
           <Link href="/" className="text-xs font-medium text-blue hover:text-blue-deep">
             Back to scan
           </Link>

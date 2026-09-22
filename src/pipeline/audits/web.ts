@@ -5,7 +5,7 @@ import { SERVICE_BY_FAMILY } from "@/lib/types";
 const SERVICE = SERVICE_BY_FAMILY.web;
 
 /**
- * Website audit. Signal → indication → agency pitch → E2M service.
+ * Website audit. Signal → indication → agency pitch → recommended service.
  * Every finding carries the measurement that proves it. Plan §5.4, App. B
  */
 export const auditWeb: AuditFn = async (ctx) => {

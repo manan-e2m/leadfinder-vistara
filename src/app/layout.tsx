@@ -27,7 +27,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "E2M LeadFinder",
+  title: "LeadFinder",
   description:
     "Scan your agency, get a verified, scored shortlist of prospects in under a minute. Built for agency owners who need leads, not dashboards.",
   icons: {

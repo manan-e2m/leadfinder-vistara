@@ -13,41 +13,8 @@ export const FAMILY_LABEL: Record<string, string> = {
   web: "Web", ecommerce: "eCommerce", seo: "SEO", ppc: "PPC", content: "Content", ai: "AI intake",
 };
 
-/**
- * App-chrome logo mark. Server-component-safe: it reads the centralized
- * brand through the CSS variables that layout.tsx injects on <body>
- * (--logo-url / --brand-primary), so the extracted logo + colors apply
- * across the whole platform, not just the audit page. When nothing was
- * extracted (--logo-url: none) it falls back to a generated letter mark —
- * the "Using generated brand" hint is rendered by the client-side
- * <BrandLogo> (see components/BrandProvider.tsx) where the context lives.
- */
-export function Wordmark({ subtitle }: { subtitle?: string }) {
-  return (
-    <div className="group flex items-center gap-2.5">
-      <span
-        className="brand-mark relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] text-[15px] font-extrabold leading-none tracking-tight text-white shadow-lift"
-      >
-        <span className="brand-mark-logo" aria-hidden />
-        <span className="e2m-letter relative z-10">
-          E<span className="text-white/95">2</span>M
-        </span>
-        {/* animated sheen sweeps across on hover */}
-        <span className="e2m-mark-sheen" />
-      </span>
-      <span className="flex flex-col leading-none">
-        <span className="text-[16px] font-extrabold tracking-tight text-ink">
-          Lead<span className="text-blue">Finder</span>
-        </span>
-        {subtitle && (
-          <span className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-ink-40">
-            {subtitle}
-          </span>
-        )}
-      </span>
-    </div>
-  );
-}
+/** Client wordmark — extracted logo + LeadFinder lockup. */
+export { Wordmark } from "./BrandProvider";
 
 export function Chip({
   children,
@@ -73,7 +40,7 @@ export function Chip({
 }
 
 const COMPONENT_META = [
-  { key: "fit", label: "Fit", max: SCORE_WEIGHTS.fit, color: "var(--e2m-blue)" },
+  { key: "fit", label: "Fit", max: SCORE_WEIGHTS.fit, color: "var(--blue)" },
   { key: "pain", label: "Pain", max: SCORE_WEIGHTS.pain, color: "var(--crit)" },
   { key: "pay", label: "Ability to pay", max: SCORE_WEIGHTS.pay, color: "var(--ok)" },
   { key: "reach", label: "Reachability", max: SCORE_WEIGHTS.reach, color: "var(--warn)" },

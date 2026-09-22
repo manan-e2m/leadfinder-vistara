@@ -3,7 +3,7 @@ import type { CrmProvider, CrmContact } from "./types";
 import { log } from "@/lib/logger";
 
 /**
- * GoHighLevel first — E2M's own event forms run on LeadConnector and GHL
+ * GoHighLevel first — event forms run on LeadConnector and GHL
  * adoption among the agencies in this room is high. HubSpot second. CSV
  * always, and never dependent on either integration working. Plan §11.1
  *

@@ -35,6 +35,17 @@ export function decideRoute(icp: Icp): RouteDecision {
   if (ECOM_RE.test(haystack) || /ecommerce/i.test(services)) routes.add("ecommerce");
   if (B2B_RE.test(haystack)) routes.add("regional_b2b");
 
+  // Multi-market / extra-country geography (U.S. + Canada, nationwide) is a
+  // regional search even when the vertical itself looks local. B2B sourcing
+  // is what actually covers those extra markets; Places stays metro-biased.
+  const geoParts = geo.split(",").map((s) => s.trim()).filter(Boolean);
+  if (
+    geoParts.length > 1 ||
+    /canada|anywhere in the u\.?s|nationwide|international|neighboring states/i.test(geo)
+  ) {
+    routes.add("regional_b2b");
+  }
+
   // Budget-qualified is additive rather than exclusive: an agency selling
   // paid media wants businesses with proven willingness to spend, whatever
   // the vertical. A business running ads has budget and intent, the two

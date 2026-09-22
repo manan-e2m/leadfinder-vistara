@@ -17,7 +17,7 @@ import type { BrandAssets } from "@/lib/types";
  * brand" hint. That state is carried by `neutral: true` + `generated: true`.
  */
 
-const UA = "E2M-LeadFinder/1.0 (+https://e2msolutions.com)";
+const UA = "LeadFinder/1.0";
 const FETCH_TIMEOUT_MS = 6_000;
 
 /** Result of one extraction pass over one site. */
@@ -27,10 +27,12 @@ export interface ExtractedBrand {
   /** where the logo came from — surfaced for debugging / the hint chip */
   logoSource: "meta" | "icon" | "logo-img" | "svg" | null;
   colorSource: "css" | null;
+  /** light-on-transparent mark that needs a dark tile */
+  logoOnDark: boolean;
 }
 
 const EMPTY: ExtractedBrand = {
-  logoUrl: null, primary: null, logoSource: null, colorSource: null,
+  logoUrl: null, primary: null, logoSource: null, colorSource: null, logoOnDark: false,
 };
 
 function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
@@ -127,6 +129,9 @@ function absolutize(src: string, base: string): string | null {
 }
 
 function isUsableLogo(url: string): boolean {
+  if (url.startsWith("data:image/svg+xml")) return url.length > 80 && url.length < 80_000;
+  // Empty data URIs (`data:,`) are parked-domain favicon stubs.
+  if (/^data:/i.test(url)) return false;
   if (!/^https?:\/\//i.test(url)) return false;
   // 1×1 tracking pixels and spacer gifs are not logos
   if (/\b(?:pixel|1x1|blank|spacer|transparent)\b/i.test(url)) return false;
@@ -155,36 +160,125 @@ function isUsableLogo(url: string): boolean {
   const PHOTO_PATH = /\/(?:uploads|wp-content\/uploads|media|photos?|gallery|blog|portfolio|cases?|team)\/(?:20\d\d\/)?/i;
   if (/\.jpe?g(\?|$)/i.test(url) && (PHOTO_NAME.test(url) || PHOTO_PATH.test(url))) return false;
   if (/\.(?:jpe?g|heic|avif)(\?|$)/i.test(url) && PHOTO_NAME.test(url)) return false;
+  // Social-share cards (1200×628 OG images, Shopify pad_color banners) look
+  // like a smear when forced into a 36px header mark.
+  if (isOgCardUrl(url)) return false;
   return true;
 }
 
-/** (a) og:image · apple-touch-icon — big, usually high-quality marks. */
-export function logoFromMeta(html: string, base: string): string | null {
+/** Typical Open Graph / Twitter card URLs — marketing photos, not marks. */
+function isOgCardUrl(url: string): boolean {
+  return /(?:og[-_]?image|opengraph|twitter[-_]?card|social[-_]?share|pad_color=|[?&]height=628|[?&]width=1200)/i.test(url);
+}
+
+/** Filename hint for inverted / white-on-transparent marks. */
+export function logoUrlLooksLight(url: string): boolean {
+  return /white|inverted|on-?dark|logo-light/i.test(url);
+}
+
+/** Fetch an SVG and see if its painted fills are white / near-white. */
+async function svgIsLightMark(url: string): Promise<boolean> {
+  if (url.startsWith("data:image/svg+xml")) {
+    try {
+      const raw = url.includes(";base64,")
+        ? Buffer.from(url.split(";base64,")[1] ?? "", "base64").toString("utf8")
+        : decodeURIComponent(url.replace(/^data:image\/svg\+xml[^,]*,/, ""));
+      return svgFillsAreLight(raw);
+    } catch {
+      return false;
+    }
+  }
+  if (!/^https?:\/\//i.test(url) || !/\.svg(\?|$)/i.test(url)) return false;
+  try {
+    const res = await fetchWithTimeout(url, 4_000);
+    if (!res.ok) return false;
+    const text = (await res.text()).slice(0, 80_000);
+    return svgFillsAreLight(text);
+  } catch {
+    return false;
+  }
+}
+
+function isLightFill(f: string): boolean {
+  if (f === "white") return true;
+  const hex = f.replace("#", "");
+  if (/^[ef]{3}$|^[ef]{6}$/i.test(hex)) return true;
+  return /^rgb\(\s*255\s*,\s*255\s*,\s*255\s*\)$/i.test(f);
+}
+
+function svgFillsAreLight(svg: string): boolean {
+  const fills = [...svg.matchAll(/\bfill=["']([^"']+)["']/gi)].map((m) => m[1].toLowerCase());
+  const painted = fills.filter((f) => f !== "none" && f !== "transparent");
+  if (!painted.length) return false;
+  const light = painted.filter(isLightFill);
+  return light.length * 2 >= painted.length;
+}
+
+export function resolveLogoUrl(src: string, domain: string): string | null {
+  try {
+    const abs = src.startsWith("http") ? src : new URL(src, `https://${domain}/`).toString();
+    return isUsableLogo(abs) ? abs : null;
+  } catch {
+    return null;
+  }
+}
+
+function ogImageFromMeta(html: string, base: string): string | null {
   const og = html.match(
     /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
   ) ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-  if (og?.[1]) {
-    const abs = absolutize(og[1], base);
-    if (abs && isUsableLogo(abs)) return abs;
-  }
+  if (!og?.[1]) return null;
+  return absolutize(og[1], base);
+}
+
+function appleTouchIcon(html: string, base: string): string | null {
   const apple = html.match(
     /<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]*>/gi
   );
-  if (apple) {
-    // prefer the largest declared size
-    let best: { href: string; size: number } | null = null;
-    for (const tag of apple) {
-      const href = tag.match(/href=["']([^"']+)["']/i)?.[1];
-      if (!href) continue;
-      const size = Number(tag.match(/sizes=["'](\d+)x\d+["']/i)?.[1] ?? 180);
-      if (!best || size > best.size) best = { href, size };
-    }
-    if (best) {
-      const abs = absolutize(best.href, base);
-      if (abs && isUsableLogo(abs)) return abs;
-    }
+  if (!apple) return null;
+  let best: { href: string; size: number } | null = null;
+  for (const tag of apple) {
+    const href = tag.match(/href=["']([^"']+)["']/i)?.[1];
+    if (!href) continue;
+    const size = Number(tag.match(/sizes=["'](\d+)x\d+["']/i)?.[1] ?? 180);
+    if (!best || size > best.size) best = { href, size };
   }
+  return best ? absolutize(best.href, base) : null;
+}
+
+/** (a) og:image · apple-touch-icon — kept for callers; extraction ranks these lower than real marks. */
+export function logoFromMeta(html: string, base: string): string | null {
+  const apple = appleTouchIcon(html, base);
+  if (apple && isUsableLogo(apple)) return apple;
+  const og = ogImageFromMeta(html, base);
+  if (og && /logo|icon|mark|brand|favicon/i.test(og) && isUsableLogo(og)) return og;
   return null;
+}
+
+type LogoCandidate = { url: string; source: NonNullable<ExtractedBrand["logoSource"]> };
+
+function scoreLogo({ url, source }: LogoCandidate): number {
+  let score = 0;
+  if (source === "logo-img") score += 50;
+  if (source === "svg") score += 40;
+  if (source === "meta") score += 15;
+  if (source === "icon") score += 10;
+  if (/\/icon\.svg|\/logo\.(?:svg|png)/i.test(url)) score += 35;
+  if (/\.svg(\?|$)/i.test(url)) score += 25;
+  if (/logo/i.test(url)) score += 20;
+  if (/favicon/i.test(url)) score -= 15;
+  if (isOgCardUrl(url)) score -= 80;
+  return score;
+}
+
+function pickBestLogo(candidates: LogoCandidate[]): LogoCandidate | null {
+  let best: { cand: LogoCandidate; score: number } | null = null;
+  for (const cand of candidates) {
+    if (!isUsableLogo(cand.url)) continue;
+    const score = scoreLogo(cand);
+    if (!best || score > best.score) best = { cand, score };
+  }
+  return best?.cand ?? null;
 }
 
 /** (b) <link rel=icon> any variant → favicon.ico probe. */
@@ -205,22 +299,48 @@ export function faviconFromLinks(html: string, base: string): string | null {
   return null;
 }
 
-/** (d) logo candidates from <img src|alt|class containing "logo"> + header SVGs. */
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+/** Product-card photos (Shopify "Custom Logo Tumbler") are not the brand mark. */
+function isProductShot(src: string, alt: string, cls: string): boolean {
+  if (/card__media|product-card|media--hover|product__media/i.test(cls)) return true;
+  if (/\b(?:custom|personalized|engraved)\s+logo\b/i.test(alt)) return true;
+  if (/\b(?:tumbler|keychain|mousepad|water bottle|corporate gifts?)\b/i.test(alt)) return true;
+  if (/\/(?:IMG_|DSC[_-]?|GFT|LWB|FSK)\d/i.test(src)) return true;
+  return false;
+}
+
+/** (d) logo candidates from header marks + <img> with logo/brand in src/alt/class. */
 export function logoImgFromHtml(html: string, base: string): string | null {
-  const imgs =
-    html.match(/<img\b[^>]*>/gi) ?? [];
+  const headerHtml = html.match(/<header\b[\s\S]*?<\/header>/i)?.[0] ?? "";
+  const imgs = html.match(/<img\b[^>]*>/gi) ?? [];
   let best: { src: string; score: number } | null = null;
   for (const tag of imgs) {
-    const src = tag.match(/\bsrc=["']([^"']+)["']/i)?.[1];
-    if (!src) continue;
-    const alt = tag.match(/\balt=["']([^"']*)["']/i)?.[1] ?? "";
+    const rawSrc = tag.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+    if (!rawSrc) continue;
+    const src = decodeEntities(rawSrc);
+    const alt = decodeEntities(tag.match(/\balt=["']([^"']*)["']/i)?.[1] ?? "");
     const cls = tag.match(/\bclass=["']([^"']*)["']/i)?.[1] ?? "";
     const id = tag.match(/\bid=["']([^"']*)["']/i)?.[1] ?? "";
     const hay = `${src} ${alt} ${cls} ${id}`;
-    if (!/logo|brandmark|brand-mark/i.test(hay)) continue;
-    // score: logo in src/alt beats class-only; svg beats raster
-    let score = /logo/i.test(alt) ? 3 : /logo/i.test(src) ? 2 : 1;
-    if (/\.svg/i.test(src)) score += 1;
+    const inHeader =
+      headerHtml.includes(tag) ||
+      /header__heading-logo|site-logo|navbar-brand|custom-logo|brand-logo/i.test(cls);
+    if (isProductShot(src, alt, cls)) continue;
+    if (!inHeader && !/logo|brandmark|brand-mark|wordmark/i.test(hay)) continue;
+    let score = 0;
+    if (inHeader) score += 20;
+    if (/header__heading-logo|site-logo|navbar-brand|header__logo/i.test(cls)) score += 20;
+    if (/logo/i.test(src)) score += 8;
+    if (/logo/i.test(alt) && !/\b(?:custom|personalized)\s+logo\b/i.test(alt)) score += 6;
+    if (/\.svg/i.test(src)) score += 5;
     const abs = absolutize(src, base);
     if (!abs || !isUsableLogo(abs)) continue;
     if (!best || score > best.score) best = { src: abs, score };
@@ -228,29 +348,42 @@ export function logoImgFromHtml(html: string, base: string): string | null {
   return best?.src ?? null;
 }
 
-/** (d) inline SVG inside header/nav — renderable vector mark. */
+/** Lucide/Heroicons/currentColor marks are UI chrome, not a brand logo. */
+function isDecorativeSvg(svg: string): boolean {
+  if (/lucide|heroicon|feather|tabler-icon|font-awesome|iconify/i.test(svg)) return true;
+  const hasPaintedFill = /fill=["']#(?:[0-9a-f]{3}|[0-9a-f]{6})["']/i.test(svg);
+  if (/\bcurrentColor\b/i.test(svg) && !hasPaintedFill) return true;
+  if (/width=["']24["']/i.test(svg) && /height=["']24["']/i.test(svg) && svg.length < 2_500) return true;
+  return false;
+}
+
+/** (d) inline SVG inside header/nav — skip icon-font decorations. */
 export function logoSvgFromHeader(html: string): string | null {
   const headerNav =
     html.match(/<header\b[\s\S]*?<\/header>/i) ?? html.match(/<nav\b[\s\S]*?<\/nav>/i);
   if (!headerNav) return null;
-  const svg = headerNav[0].match(/<svg\b[\s\S]*?<\/svg>/i)?.[0];
-  if (!svg || svg.length > 60_000) return null;
-  // data-URI wrap so it can ride in BrandAssets.logoUrl like any other src
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  const svgs = headerNav[0].match(/<svg\b[\s\S]*?<\/svg>/gi) ?? [];
+  for (const svg of svgs) {
+    if (svg.length > 60_000 || isDecorativeSvg(svg)) continue;
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  }
+  return null;
 }
 
-/** (b) last-ditch favicon.ico existence probe. */
+/** Next.js /icon.svg and classic favicon.ico probes. */
 export async function faviconIcoProbe(origin: string): Promise<string | null> {
-  const url = `${origin}/favicon.ico`;
-  try {
-    const res = await fetchWithTimeout(url, 4_000);
-    if (res.ok) {
+  for (const path of ["/icon.svg", "/logo.svg", "/apple-touch-icon.png", "/favicon.ico"]) {
+    const url = `${origin}${path}`;
+    try {
+      const res = await fetchWithTimeout(url, 4_000);
+      if (!res.ok) continue;
+      const type = res.headers.get("content-type") ?? "";
+      if (type.includes("text/html")) continue;
       const buf = Buffer.from(await res.arrayBuffer());
-      // real favicon, not an empty/stub response
-      if (buf.length > 100) return url;
+      if (buf.length > 80) return url;
+    } catch {
+      /* try the next well-known path */
     }
-  } catch {
-    /* ignore — probe is best-effort */
   }
   return null;
 }
@@ -269,6 +402,18 @@ function stylesheetHrefs(html: string, base: string): string[] {
   return out.slice(0, 4); // budget: four sheets is plenty
 }
 
+function clientRedirectUrl(html: string, base: string): string | null {
+  const loc =
+    html.match(/window\.location(?:\.href)?\s*=\s*["']([^"']+)["']/i) ??
+    html.match(/<meta[^>]+http-equiv=["']refresh["'][^>]+content=["'][^"']*url=([^"'>;]+)/i);
+  if (!loc?.[1]) return null;
+  return absolutize(loc[1].trim(), base);
+}
+
+function isParkingShell(html: string): boolean {
+  return /lander_type\s*=\s*["']?parkweb|LANDER_SYSTEM|parking-lander|wsimg\.com\/parking/i.test(html);
+}
+
 /* ────────────────────────── main entry ────────────────────────── */
 
 /**
@@ -285,11 +430,31 @@ export async function extractBrandFromSite(url: string): Promise<ExtractedBrand>
   }
 
   let html = "";
+  let pageUrl = target;
   try {
     const res = await fetchWithTimeout(target);
     if (res.ok) html = (await res.text()).slice(0, 1_500_000);
   } catch {
     /* fall through — later stages may still probe favicon */
+  }
+
+  // JS/meta bounce (e.g. tracksync.com → /lander). Follow once.
+  const bounce = html ? clientRedirectUrl(html, pageUrl) : null;
+  if (bounce && bounce !== pageUrl) {
+    try {
+      const res = await fetchWithTimeout(bounce);
+      if (res.ok) {
+        html = (await res.text()).slice(0, 1_500_000);
+        pageUrl = bounce;
+      }
+    } catch {
+      /* keep the first body */
+    }
+  }
+
+  // GoDaddy/parking shells have no brand — don't treat their empty favicon as a logo.
+  if (isParkingShell(html)) {
+    return EMPTY;
   }
 
   if (!html) {
@@ -299,18 +464,21 @@ export async function extractBrandFromSite(url: string): Promise<ExtractedBrand>
     return EMPTY;
   }
 
-  const base = target;
+  const base = pageUrl;
   const result: ExtractedBrand = { ...EMPTY };
+  const candidates: LogoCandidate[] = [];
+  const add = (url: string | null, source: LogoCandidate["source"]) => {
+    if (url) candidates.push({ url, source });
+  };
 
-  /* (a) og:image / apple-touch-icon */
-  result.logoUrl = logoFromMeta(html, base);
-  if (result.logoUrl) result.logoSource = "meta";
-
-  /* (b) <link rel=icon> → favicon.ico */
-  if (!result.logoUrl) {
-    result.logoUrl = faviconFromLinks(html, base);
-    if (result.logoUrl) result.logoSource = "icon";
-  }
+  /* Real marks first — og:image/favicon used to win and paint a 1200×628
+     social card (or a 32px favicon) into the 36px header. */
+  add(logoImgFromHtml(html, base), "logo-img");
+  add(logoSvgFromHeader(html), "svg");
+  add(appleTouchIcon(html, base), "meta");
+  add(faviconFromLinks(html, base), "icon");
+  const og = ogImageFromMeta(html, base);
+  if (og && /logo|icon|mark|brand|favicon/i.test(og)) add(og, "meta");
 
   /* (c) colours: inline styles + <style> blocks + linked sheets */
   const styleBlocks = [...(html.match(/<style\b[\s\S]*?<\/style>/gi) ?? []).map((s) =>
@@ -337,23 +505,15 @@ export async function extractBrandFromSite(url: string): Promise<ExtractedBrand>
   result.primary = pickBrandColor(colorBag);
   if (result.primary) result.colorSource = "css";
 
-  /* (d) logo candidates from <img>/<svg> — used when meta/icon yielded nothing */
-  if (!result.logoUrl) {
-    result.logoUrl = logoImgFromHtml(html, base);
-    if (result.logoUrl) result.logoSource = "logo-img";
-  }
-  if (!result.logoUrl) {
-    result.logoUrl = logoSvgFromHeader(html);
-    if (result.logoUrl) result.logoSource = "svg";
-  }
-
-  /* still nothing? favicon.ico probe as the final logo attempt */
-  if (!result.logoUrl) {
+  let best = pickBestLogo(candidates);
+  if (!best) {
     const favicon = await faviconIcoProbe(origin);
-    if (favicon) {
-      result.logoUrl = favicon;
-      result.logoSource = "icon";
-    }
+    if (favicon) best = { url: favicon, source: "icon" };
+  }
+  if (best) {
+    result.logoUrl = best.url;
+    result.logoSource = best.source;
+    result.logoOnDark = logoUrlLooksLight(best.url) || (await svgIsLightMark(best.url));
   }
 
   return result;

@@ -25,6 +25,39 @@ export interface SourceResult {
 const TARGET_POOL = 340;
 const MIN_POOL = 60;
 
+function splitList(value: string): string[] {
+  return value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/** Map confirm-card geography chips onto a Places radius. Multi-picks take the widest. */
+function radiusFromGeography(geo: string, fallback: number): number {
+  let miles = fallback;
+  for (const p of splitList(geo).map((s) => s.toLowerCase())) {
+    if (/anywhere in the u\.?s|united states|nationwide|canada|international/.test(p)) {
+      miles = Math.max(miles, 2500);
+    } else if (/neighboring states/.test(p)) {
+      miles = Math.max(miles, 400);
+    } else if (/^all of /.test(p)) {
+      miles = Math.max(miles, 200);
+    }
+  }
+  return miles;
+}
+
+/** Display chips → location names Apollo/B2B actually search. */
+function regionsFromGeography(geo: string, metro: string): string {
+  const parts = splitList(geo);
+  const mapped = (parts.length ? parts : [metro]).map((p) => {
+    if (/anywhere in the u\.?s/i.test(p)) return "United States";
+    const allOf = p.match(/^all of (.+)$/i);
+    if (allOf) return allOf[1];
+    const neigh = p.match(/^(.+?) \+ neighboring states$/i);
+    if (neigh) return neigh[1];
+    return p;
+  });
+  return [...new Set(mapped)].join(", ");
+}
+
 export async function sourceCandidates(args: {
   icp: Icp;
   route: RouteDecision;
@@ -37,7 +70,7 @@ export async function sourceCandidates(args: {
 
   // Two agencies targeting dentists in the same metro share one pool. This
   // is the biggest cost and latency saver in the whole build. Plan §9.2
-  const key = poolKey(metro, vertical);
+  const key = poolKey(metro, vertical, icp.geography.value);
   const cached = await cacheGet<PlaceRecord[]>(key);
   if (cached?.length) {
     log("info", "source", `pool cache hit: ${cached.length} candidates for ${key}`);
@@ -50,7 +83,7 @@ export async function sourceCandidates(args: {
     };
   }
 
-  let radius = icp.radiusMiles;
+  let radius = radiusFromGeography(icp.geography.value, icp.radiusMiles);
   let widenedNote: string | null = null;
   let pool: PlaceRecord[] = [];
 
@@ -80,7 +113,7 @@ export async function sourceCandidates(args: {
     try {
       const companies = await b2b.search({
         industry: vertical,
-        region: icp.geography.value || metro,
+        region: regionsFromGeography(icp.geography.value, metro),
         limit: Math.floor(TARGET_POOL / 2),
       });
       sourcesUsed.push("B2B database + LinkedIn");

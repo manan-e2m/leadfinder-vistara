@@ -1,7 +1,7 @@
 {
-  "name": "E2M LeadFinder",
+  "name": "LeadFinder",
   "short_name": "LeadFinder",
-  "description": "E2M LeadFinder — lead discovery and enrichment",
+  "description": "LeadFinder — lead discovery and enrichment",
   "background_color": "#ffffff",
   "theme_color": "#0F6B6B",
   "display": "standalone",

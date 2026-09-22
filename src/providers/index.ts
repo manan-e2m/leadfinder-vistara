@@ -41,6 +41,6 @@ export function providerStatus() {
     { slot: "CRM · GoHighLevel",    provider: ghl },
     { slot: "CRM · HubSpot",        provider: hubspot },
     { slot: "Email",                provider: email },
-    { slot: "E2M benchmark",        provider: benchmark },
+    { slot: "Benchmark",            provider: benchmark },
   ].map((r) => ({ slot: r.slot, name: r.provider.name, live: r.provider.live }));
 }

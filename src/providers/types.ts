@@ -218,7 +218,7 @@ export interface BenchmarkProvider {
   readonly name: string;
   readonly live: boolean;
   /**
-   * Benchmark a measured value against E2M's corpus of 10,000+ delivered
+   * Benchmark a measured value against a corpus of 10,000+ delivered
    * sites. Additive by design: when the corpus is unavailable this returns
    * null and the benchmark line is omitted, never invented. Plan §8.1, §15
    */

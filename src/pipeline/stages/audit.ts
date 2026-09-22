@@ -8,7 +8,7 @@ import { coreTermsFor } from "./route";
 
 /**
  * Stage 4 — Gap audits. The product's differentiator: cheap automated checks
- * per candidate, each finding translated into the E2M service that fixes it.
+ * per candidate, each finding translated into the service that fixes it.
  * Budget 20–45 s for the whole stage. Plan §5.4
  *
  * Fallbacks: an audit that times out for a candidate is SKIPPED and that

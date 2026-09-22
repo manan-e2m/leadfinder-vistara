@@ -48,14 +48,14 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
   const title = view.workspace.agencyName ?? view.workspace.domain;
 
   // The run's agency brand takes over the chrome here — the "add your website
-  // and the platform becomes yours" behavior. Public pages stay E2M.
+  // and the platform becomes yours" behavior. Public pages stay on the default theme.
   const brand = { ...DEFAULT_BRAND, ...(view.brand ?? {}) };
 
   return (
     <main className="relative z-[1] min-h-screen" style={brandCssVars(brand)}>
       <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
-          <Link href="/"><Wordmark /></Link>
+          <Wordmark />
           <div className="flex items-center gap-4">
             <Link href="/" className="text-xs font-semibold text-blue hover:text-blue-deep">
               New scan
@@ -67,7 +67,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ runId:
         </div>
       </header>
 
-      <div className="e2m-hero-glow">
+      <div className="hero-glow">
         <div className="mx-auto max-w-3xl px-6 pb-16 pt-10">
           <div className="mb-6 animate-rise">
             <div className="flex flex-wrap items-center gap-2">
@@ -127,7 +127,7 @@ function ExpiredNotice() {
     <main className="relative z-[1] min-h-screen">
       <header className="border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
-          <Link href="/"><Wordmark /></Link>
+          <Wordmark />
         </div>
       </header>
       <div className="mx-auto flex max-w-md flex-col items-center px-6 py-24 text-center">

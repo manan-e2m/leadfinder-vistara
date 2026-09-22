@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { readJson } from "@/lib/json";
-import { DEFAULT_BRAND, type BrandTheme } from "@/lib/brandTheme";
+import { DEFAULT_BRAND, themeFromBrand, type BrandTheme } from "@/lib/brandTheme";
 import { generatedAvatarColor } from "@/lib/brand";
 import type { BrandAssets } from "@/lib/types";
 import { BrandProvider } from "@/components/BrandProvider";
@@ -20,7 +20,7 @@ export async function loadBrandTheme(opts?: {
   // when the visitor has scanned their site this session, the `lf_ws` cookie
   // carries the workspace id and the ENTIRE app — home, confirm card, run,
   // results, audit — adopts the extracted brand. With no cookie, public
-  // chrome stays E2M. Explicit runId (deep link to a shared result) always
+  // chrome stays on the default theme. Explicit runId (deep link to a shared result) always
   // wears that run's brand regardless of cookie.
   if (!opts?.workspaceId && !opts?.runId) {
     try {
@@ -28,9 +28,9 @@ export async function loadBrandTheme(opts?: {
       const wsId = jar.get("lf_ws")?.value;
       if (wsId) return loadForWorkspace(wsId);
     } catch {
-      // cookies() unavailable (e.g. prerender) — fall through to E2M
+      // cookies() unavailable (e.g. prerender) — fall through to default theme
     }
-    return { brand: DEFAULT_BRAND, initial: "E" };
+    return { brand: DEFAULT_BRAND, initial: "L" };
   }
   return loadScoped(opts);
 }
@@ -84,15 +84,7 @@ async function loadScoped(opts: {
     brand.primary = generatedAvatarColor(brand.agencyName || domain);
   }
 
-  const initial = (brand.agencyName || domain || "E")
-    .split(".")[0]
-    .replace(/[-_]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .find(Boolean)?.[0]
-    ?.toUpperCase() ?? "E";
-
-  return { brand, initial };
+  return themeFromBrand(brand, domain);
 }
 
 /** Wrap children in the brand context (client provider) — server-safe. */

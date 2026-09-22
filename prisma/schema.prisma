@@ -1,4 +1,4 @@
-// LeadFinder — E2M Lead Finding & Prospecting (Vistara 2027)
+// LeadFinder — lead finding and prospecting
 //
 // Deliberately provider-agnostic: no native enums, no Json columns, no
 // scalar arrays. Structured payloads live in TEXT columns and are read
@@ -43,7 +43,7 @@ model Workspace {
   @@index([createdAt])
 }
 
-/// Lightweight identity. Only ever requested at CRM push or E2M scoping —
+/// Lightweight identity. Only ever requested at CRM push or scoping —
 /// never to see results. Plan §5.1, §7.1
 model Attendee {
   id          String   @id @default(cuid())
@@ -152,7 +152,7 @@ model Candidate {
   @@index([externalId])
 }
 
-/// One detected gap, with the measurement that proves it and the E2M
+/// One detected gap, with the measurement that proves it and the
 /// service that fixes it. The unit of output is never a company record —
 /// it is a company plus a named gap plus proof. Plan §3.3, §5.4
 model Signal {
@@ -172,11 +172,11 @@ model Signal {
   confidence  Float   @default(1)
   /// web | ecommerce | seo | ppc | content | ai
   family      String
-  /// the E2M service that delivers the fix
+  /// the service that delivers the fix
   service     String
   /// what the agency pitches
   pitch       String
-  /// optional benchmark sentence from the E2M corpus. Plan §8.1
+  /// optional benchmark sentence from the delivery corpus. Plan §8.1
   benchmark   String?
 
   candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
@@ -233,7 +233,7 @@ model Opener {
 }
 
 /// The one-page white-labeled audit. The agency's logo and colours, the
-/// prospect's name, the findings with evidence. E2M's business model in
+/// prospect's name, the findings with evidence. White-label in
 /// miniature. Plan §5.6
 model AuditDoc {
   id           String   @id @default(cuid())
@@ -248,7 +248,7 @@ model AuditDoc {
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
 
-/// "Have E2M scope and deliver this" — one tap, pre-filled, routed to the
+/// "Have us scope and deliver this" — one tap, pre-filled, routed to the
 /// partner team. The whole upsell. Plan §7.3
 model ScopeRequest {
   id           String   @id @default(cuid())

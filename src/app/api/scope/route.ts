@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * "Have E2M scope and deliver this" — one tap, pre-filled, routed to the
+ * "Have us scope and deliver this" — one tap, pre-filled, routed to the
  * partner team. The whole upsell. Identity is only ever requested here (or at
  * CRM push), never to see results. Plan §7.1, §7.3
  */

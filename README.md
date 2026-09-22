@@ -1,7 +1,6 @@
-# E2M LeadFinder
+# LeadFinder
 
-Instant ICP-to-prospect engine for agency owners — built for the **Vistara
-conference demo**. An agency enters their domain, the system reads their
+Instant ICP-to-prospect engine for agency owners. An agency enters their domain, the system reads their
 footprint, confirms their ICP in one AI pass, then sources, audits, verifies
 and scores **20 real leads** against that ICP, each with a branded mini-audit
 and an opener. Participants scan a QR code at the booth and watch their
@@ -52,7 +51,7 @@ the matching provider fall back to its mock.
 | `PHONE_VERIFY_API_KEY` | Verify — phone number checks. |
 | `EMAIL_VERIFY_API_KEY` | Verify — email deliverability checks. |
 | `ANTHROPIC_API_KEY` | ICP confirmation, lead scoring, opener drafting (Claude). |
-| `E2M_BENCHMARK_CORPUS_URL` | Benchmark corpus fetched by the seed script. |
+| `BENCHMARK_CORPUS_URL` | Benchmark corpus fetched by the seed script. |
 
 ### Outreach / CRM
 

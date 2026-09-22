@@ -7,7 +7,7 @@ export default function Home() {
     <main className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-line bg-surface/85 backdrop-blur">
         <div className="mx-auto flex max-w-board items-center justify-between px-6 py-3.5">
-          <Wordmark subtitle="Vistara 2027" />
+          <Wordmark />
           <div className="flex items-center gap-4">
             <span className="hidden text-xs font-medium text-ink-40 sm:inline">
               White label services. Black label standard.
@@ -22,7 +22,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="e2m-hero-glow">
+      <div className="hero-glow">
         <div className="mx-auto max-w-board px-6 pb-16 pt-14">
           <div className="mx-auto mb-9 max-w-2xl text-center">
             <span className="animate-pop inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-[11px] font-semibold text-blue-deep shadow-sm">
@@ -57,7 +57,7 @@ export default function Home() {
             {[
               { n: "01", t: "Verified, not scraped", d: "Every phone, email and business status is checked before a lead reaches your screen. Twelve real beats fifty with six bad numbers." },
               { n: "02", t: "Scored on the arithmetic", d: "Fit × Pain × Ability to pay × Reachability. Every component shown, none hidden behind one number." },
-              { n: "03", t: "A gap, with proof", d: "Not a company record. A company, a named gap, the measurement that proves it, and the E2M service that fixes it." },
+              { n: "03", t: "A gap, with proof", d: "Not a company record. A company, a named gap, the measurement that proves it, and the service that fixes it." },
             ].map((c, i) => (
               <div
                 key={c.n}

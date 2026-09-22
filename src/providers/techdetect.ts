@@ -121,7 +121,7 @@ const live: TechDetectProvider = {
     try {
       res = await fetch(target, {
         redirect: "follow",
-        headers: { "User-Agent": "E2M-LeadFinder/1.0 (+https://e2msolutions.com)" },
+        headers: { "User-Agent": "LeadFinder/1.0" },
         signal: AbortSignal.timeout(9_000),
       });
     } catch (e) {

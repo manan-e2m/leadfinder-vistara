@@ -115,7 +115,7 @@ export async function POST(req: Request) {
 
   // Session-scoped white-labeling: once THIS scan's site has been read, the
   // whole app (home, confirm card, run, results, audit) wears the extracted
-  // brand — the cookie flips loadBrandTheme from E2M chrome to the agency
+  // brand — the cookie flips loadBrandTheme from default chrome to the agency
   // theme. Cleared by "New scan" reset / natural expiry.
   const res = NextResponse.json({
     workspaceId: workspace.id,

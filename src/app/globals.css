@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /**
- * E2M brand system — pulled from e2msolutions.com.
- *   Signature blue  #1638fb   ("Black Label Standard")
+ * LeadFinder brand system.
+ *   Signature blue  #1638fb
  *   Accent orange   #f35700
  *   Ink             #0a0a0a
  * Everything derives from these tokens, so the platform re-skins by editing
@@ -12,11 +12,11 @@
  * the prospect agency's own brand colour.
  */
 :root {
-  --e2m-blue: #1638fb;
+  --blue: #1638fb;
   --blue-deep: #0f28c4;
   --blue-soft: #ecefff;
 
-  --e2m-orange: #f35700;
+  --orange: #f35700;
   --orange-soft: #fff1e9;
 
   --ink: #0a0a0a;
@@ -38,7 +38,7 @@
   --crit: #c62828;
   --crit-soft: #fdeaea;
 
-  /* Default agency accent = E2M orange (the upsell). Overridden app-wide by
+  /* Default agency accent = orange (the upsell). Overridden app-wide by
      the extracted brand at runtime — layout.tsx sets --brand-* on <body>
      from the centralized BrandAssets, and the tailwind tokens read those. */
   --agency: var(--brand-primary, #f35700);
@@ -69,7 +69,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 
 /* Premium focus ring for keyboard users */
 :where(a, button, input):focus-visible {
-  outline: 2px solid var(--e2m-blue);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
 
@@ -226,7 +226,7 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 }
 
 /* Signature electric-blue hero glow, subtly animated */
-.e2m-hero-glow {
+.hero-glow {
   position: relative;
   background:
     radial-gradient(55% 80% at 12% -5%, rgba(22, 56, 251, 0.10), transparent 60%),
@@ -235,11 +235,10 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 /* The drifting hero orb now lives in the global backdrop (layout.tsx), so the
    hero section only contributes its soft radial tint — no doubled blob. */
 
-/* E2M logo mark — ink→electric-blue gradient with a hover sheen.
+/* Logo mark — ink→electric-blue gradient with a hover sheen.
    When the centralized brand has an extracted logo, .brand-mark-logo
    overlays it (see layout.tsx --logo-url); otherwise the gradient +
    letter act as the generated brand mark. */
-.e2m-mark,
 .brand-mark {
   background: linear-gradient(140deg, var(--brand-secondary, #0a0a0a) 12%, #1a2fd0 78%, var(--brand-primary, #1638fb) 100%);
 }
@@ -252,18 +251,31 @@ h1, h2, h3 { letter-spacing: -0.025em; }
   background-position: center;
   background-repeat: no-repeat;
 }
-/* When an extracted logo is present (body[data-brand-logo="1"]) it REPLACES
-   the letter mark — CSS letters stay as the generated-brand fallback only. */
-body[data-brand-logo="1"] .brand-mark .e2m-letter {
+/* When an extracted logo is present, sit it on a light tile so dark marks
+   (the common case) stay visible. The header Wordmark now prefers an <img>,
+   but CSS-background consumers still need this. */
+body[data-brand-logo="1"] .brand-mark {
+  background: #fff;
+  box-shadow: none;
+  border: 1px solid var(--line);
+}
+body[data-brand-logo="1"] .brand-mark .mark-letter {
   opacity: 0;
 }
-.e2m-mark-sheen {
+body[data-brand-logo="1"] .brand-mark-logo {
+  inset: 4px;
+}
+body[data-logo-on-dark="1"] .brand-mark {
+  background: var(--brand-secondary, #0a0a0a);
+  border-color: transparent;
+}
+.mark-sheen {
   position: absolute; inset: 0;
   background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.55) 48%, transparent 66%);
   transform: translateX(-120%);
   transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.group:hover .e2m-mark-sheen { transform: translateX(120%); }
+.group:hover .mark-sheen { transform: translateX(120%); }
 
 .shadow-board { box-shadow: 0 1px 2px rgba(10, 10, 10, 0.04), 0 8px 24px -12px rgba(10, 10, 10, 0.12); }
 .shadow-lift { box-shadow: 0 1px 2px rgba(10, 10, 10, 0.05), 0 18px 40px -20px rgba(22, 56, 251, 0.28); }

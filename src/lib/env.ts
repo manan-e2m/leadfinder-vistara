@@ -36,7 +36,7 @@ export const env = {
     ghlLocation: str("GHL_LOCATION_ID"),
     hubspot: str("HUBSPOT_ACCESS_TOKEN"),
     resend: str("RESEND_API_KEY"),
-    benchmarkCorpus: str("E2M_BENCHMARK_CORPUS_URL"),
+    benchmarkCorpus: str("BENCHMARK_CORPUS_URL"),
   },
 
   llm: {

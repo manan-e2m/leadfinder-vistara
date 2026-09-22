@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import clsx from "clsx";
 import { normalizeDomain } from "@/lib/domain";
-import { CONFIDENCE_THRESHOLD, type Icp } from "@/lib/types";
+import { CONFIDENCE_THRESHOLD, type BrandAssets, type Icp } from "@/lib/types";
+import { DEFAULT_BRAND } from "@/lib/brandTheme";
 import { useBrand, BrandLogo } from "./BrandProvider";
 import { Chip } from "./ui";
 
@@ -17,7 +17,7 @@ interface ScanResponse {
   domain: string;
   corrected: boolean;
   icp: Icp;
-  brand: { agencyName: string };
+  brand: BrandAssets;
   sourcesUsed: string[];
   fellBackToQuestions: boolean;
   siteFailure: string | null;
@@ -37,7 +37,7 @@ const FIELD_LABEL: Record<string, string> = {
 
 export default function ScanFlow() {
   const router = useRouter();
-  const { brand } = useBrand();
+  const { setBrand } = useBrand();
   const [phase, setPhase] = useState<"input" | "confirm">("input");
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -87,6 +87,11 @@ export default function ScanFlow() {
       }
       setScan(data);
       setIcp(data.icp);
+      if (data.brand?.logoUrl && !data.brand.generated) {
+        setBrand({ ...DEFAULT_BRAND, ...data.brand });
+      } else {
+        setBrand(DEFAULT_BRAND);
+      }
       setPhase("confirm");
     } catch {
       setError("Network error. Try again.");
@@ -103,18 +108,18 @@ export default function ScanFlow() {
     });
   }
 
-  /** "Services you offer" and "Who you target" take multiple picks —
-   * comma-joined into .value, which the route matcher and sourcing-widening
-   * both already expect (route regexes test substrings; Place search splits
-   * on [,&]). */
-  const MULTI_FIELDS = new Set(["targetVerticals", "servicesOffered"]);
+  /** Every confirm-card field takes multiple picks, comma-joined into
+   * .value. Route matching tests substrings; Place search and B2B region
+   * lists split on commas, so "Anywhere in the U.S., Canada" and
+   * "$5k–$10k/mo, $10k+/mo" both flow through as-is. */
+  const MULTI_FIELDS = new Set<string>(FIELD_ORDER);
 
   /* ── custom capsules and user-added fields ────────────────────
    * Every card gets a "+ Add" capsule: type any term, it becomes a chip on
-   * that card (multi fields join it into the same comma contract; single
-   * fields take it as the value). "＋ Add your own" appends a brand-new
-   * labeled card — label + free-text value — carried through to the run as
-   * icp.custom so the pipeline and outreach copy can reference it. */
+   * that card and joins the same comma contract. "＋ Add your own" appends
+   * a brand-new labeled card — label + free-text value — carried through
+   * to the run as icp.custom so the pipeline and outreach copy can
+   * reference it. */
   const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
   const [customDraft, setCustomDraft] = useState<Record<string, string>>({});
   const [customFields, setCustomFields] = useState<{ label: string; value: string }[]>([]);
@@ -168,7 +173,7 @@ export default function ScanFlow() {
     setCustomFields((f) => f.filter((x) => x.label !== label));
   }
 
-  function toggleMulti(key: "targetVerticals" | "servicesOffered", opt: string) {
+  function toggleMulti(key: (typeof FIELD_ORDER)[number], opt: string) {
     if (!icp) return;
     const f = icp[key];
     const current = f.value.split(",").map((s) => s.trim()).filter(Boolean);
@@ -228,7 +233,7 @@ export default function ScanFlow() {
           <span
             aria-hidden
             className="absolute inset-x-6 top-0 h-0.5 opacity-60"
-            style={{ background: "linear-gradient(90deg, transparent, var(--e2m-blue), transparent)" }}
+            style={{ background: "linear-gradient(90deg, transparent, var(--blue), transparent)" }}
           />
           <h1 className="text-2xl font-bold tracking-tight text-ink">Find your next 20 clients</h1>
           <p className="mt-2 text-sm text-ink-60">
@@ -296,7 +301,14 @@ export default function ScanFlow() {
       <div className="animate-rise rounded-board border border-line bg-surface p-6 shadow-board">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BrandLogo size={36} />
+            <BrandLogo
+              size={36}
+              assets={
+                scan.brand.logoUrl && !scan.brand.generated
+                  ? { ...DEFAULT_BRAND, ...scan.brand }
+                  : DEFAULT_BRAND
+              }
+            />
             <div>
               <h2 className="text-lg font-bold text-ink">{scan.brand.agencyName}</h2>
               <p className="text-xs text-ink-40">{scan.domain}</p>
@@ -305,22 +317,16 @@ export default function ScanFlow() {
           <Chip tone="blue">{scan.sourcesUsed.length} sources read</Chip>
         </div>
 
-        {brand.generated && (
-          <p className="mt-2 text-[10px] font-medium uppercase tracking-wide text-ink-40">
-            Using a generated brand. We couldn&apos;t read your logo or colours from your site.
-          </p>
-        )}
-
         {scan.corrected && (
           <p className="mt-2 text-xs text-ink-40">Assuming you meant {scan.domain}.</p>
         )}
-        {scan.siteFailure && (
+
+        {(!scan.brand.logoUrl || scan.brand.generated || scan.siteFailure) && (
           <div className="mt-2 rounded-board border border-warn/30 bg-warn-soft px-3 py-2">
-            <p className="text-xs font-semibold text-warn">
-              We couldn&apos;t read that website — check spelling or try the bare domain.
-            </p>
+            <p className="text-xs font-semibold text-warn">Website not available</p>
             <p className="mt-0.5 text-[11px] text-warn">
-              We filled this card in from your other listings. Confirm below, or re-scan to retry.
+              We couldn&apos;t read a logo or a live site from this address. The platform stays on the default theme.
+              Confirm below from other listings, or re-scan to retry.
             </p>
             <button
               type="button"
@@ -381,40 +387,24 @@ export default function ScanFlow() {
                     )}
                   </div>
                 ) : (
-                  <p className="mt-1.5 text-sm text-ink-60">We&apos;re not sure. Pick the closest:</p>
+                  <p className="mt-1.5 text-sm text-ink-60">We&apos;re not sure. Pick any that apply:</p>
                 )}
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {(() => {
-                    /* Multi cards: picked options hide from the chip row (the
-                     * capsules above already show them — the "same chip twice"
-                     * bug). Single-value cards keep ALL chips visible with the
-                     * picked one highlighted, since hiding the only selection
-                     * would leave no way to see or switch it. */
-                    const picked = isMultiField
-                      ? new Set(f.value.split(",").map((s) => s.trim()).filter(Boolean))
-                      : new Set<string>();
-                    const visible = f.options.filter((opt) => !picked.has(opt));
-                    return visible.map((opt) => {
-                      const isMulti = MULTI_FIELDS.has(key);
-                      const selected = isMulti
-                        ? f.value.split(",").map((s) => s.trim()).includes(opt) && f.value !== ""
-                        : f.value === opt;
-                    return (
+                    /* Picked options hide from the chip row — the capsules
+                     * above already show them. Leaving them here painted
+                     * the same chip twice. */
+                    const picked = new Set(f.value.split(",").map((s) => s.trim()).filter(Boolean));
+                    return f.options.filter((opt) => !picked.has(opt)).map((opt) => (
                       <button
                         key={opt}
-                        onClick={() => (isMulti ? toggleMulti(key as "targetVerticals" | "servicesOffered", opt) : setField(key, opt))}
-                        className={clsx(
-                          "rounded-chip border px-2.5 py-1 text-xs font-medium transition",
-                          selected
-                            ? "border-blue bg-blue-soft text-blue-deep"
-                            : "border-line-strong bg-surface text-ink-60 hover:border-blue"
-                        )}
+                        onClick={() => toggleMulti(key, opt)}
+                        className="rounded-chip border border-line-strong bg-surface px-2.5 py-1 text-xs font-medium text-ink-60 transition hover:border-blue"
                       >
                         {opt}
                       </button>
-                      );
-                    });
+                    ));
                   })()}
                   {/* "Add your own" capsule + inline input. */}
                   {customOpen[key] ? (

@@ -156,7 +156,7 @@ export default function Progress({ runId }: { runId: string }) {
                 className="h-full rounded-full transition-[width] duration-700 ease-out"
                 style={{
                   width: `${pct}%`,
-                  background: "linear-gradient(90deg, var(--e2m-blue), var(--e2m-orange))",
+                  background: "linear-gradient(90deg, var(--blue), var(--orange))",
                 }}
               />
             </div>

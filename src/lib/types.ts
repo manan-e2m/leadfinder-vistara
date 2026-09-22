@@ -55,6 +55,9 @@ export const BrandAssets = z.object({
    *  generated letter-avatar (first letter of the company name) instead of
    *  a logo and shows a small "Using generated brand" hint. */
   generated: z.boolean().default(false),
+  /** true when the mark is light-on-transparent (white SVG, *-white.png).
+   *  The header tile then uses a dark ground so the logo stays visible. */
+  logoOnDark: z.boolean().default(false),
 });
 export type BrandAssets = z.infer<typeof BrandAssets>;
 
@@ -103,7 +106,7 @@ export interface DetectedSignal {
   benchmark?: string;
 }
 
-/** Signal family → the E2M service that delivers the fix. Plan §5.4, App. B */
+/** Signal family → the service that delivers the fix. Plan §5.4, App. B */
 export const SERVICE_BY_FAMILY: Record<AuditFamily, string> = {
   web: "WordPress & web development",
   ecommerce: "eCommerce",

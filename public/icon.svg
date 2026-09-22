@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- E2M LeadFinder mark: rounded square in brand teal, LF monogram, finder dot -->
+  <!-- LeadFinder mark: rounded square in brand teal, LF monogram, finder dot -->
   <rect x="0" y="0" width="64" height="64" rx="14" fill="#0F6B6B"/>
   <rect x="0" y="0" width="64" height="64" rx="14" fill="url(#g)"/>
   <defs>

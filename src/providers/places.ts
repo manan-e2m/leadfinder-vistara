@@ -42,7 +42,7 @@ const mock: PlacesProvider = {
 
 /**
  * Google Places. Best single source for the local-service verticals that make
- * up most of the Vistara room. Caching rules for place details apply — the
+ * up most of the room. Caching rules for place details apply — the
  * pipeline caches at the pool level in src/lib/cache.ts. Plan App. A
  */
 const live: PlacesProvider = {

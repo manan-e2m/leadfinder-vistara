@@ -410,7 +410,7 @@ function ScopeButton({ leadId, auditToken }: { leadId: string; auditToken: strin
           onClick={() => setOpen(true)}
           className="rounded-board bg-agency px-3 py-2 text-xs font-semibold text-white hover:opacity-90"
         >
-          Have E2M scope this
+          Have us scope this
         </button>
       )}
       {open && state !== "done" && (
@@ -430,7 +430,7 @@ function ScopeButton({ leadId, auditToken }: { leadId: string; auditToken: strin
           </button>
         </div>
       )}
-      {state === "done" && <span className="text-xs text-ok">Sent to the E2M partner team ✓</span>}
+      {state === "done" && <span className="text-xs text-ok">Sent to the partner team ✓</span>}
       {state === "error" && (
         <span className="text-xs text-crit">
           Couldn&apos;t send. Check the address and try again.

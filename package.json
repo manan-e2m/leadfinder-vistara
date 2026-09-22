@@ -2,7 +2,7 @@
   "name": "leadfinder",
   "version": "0.1.0",
   "private": true,
-  "description": "E2M Lead Finding & Prospecting — instant ICP-to-prospect engine for agency owners (Vistara 2027)",
+  "description": "LeadFinder — instant ICP-to-prospect engine for agency owners",
   "scripts": {
     "dev": "next dev -p 3100",
     "build": "prisma generate && BUILD_FOR_VERIFY=1 next build",
