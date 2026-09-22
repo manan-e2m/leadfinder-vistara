@@ -25,6 +25,7 @@ export default async function AuditPage({ params }: { params: Promise<{ token: s
   const brand = readJson<BrandAssets>(doc.brandJson, {
     logoUrl: null, primary: "#0F6B6B", secondary: "#08090C",
     tone: "", agencyName: "Your agency", neutral: true, generated: false,
+    logoOnDark: false,
   });
   const findings = readJson<{ label: string; measurement: string }[]>(doc.findingsJson, []);
   const prospect = doc.lead.candidate;
